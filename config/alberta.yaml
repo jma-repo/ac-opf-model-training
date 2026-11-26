@@ -109,7 +109,9 @@ topology:
 
 params:
   snapshot_mpt: "2024-01-25 18:00"   # base case hour (winter evening; metered data available)
-  load_column: ActLoad               # AESO planning-area load incl. behind-the-fence (~AIL)
+  # AESO planning-area grid-served load (excl. behind-the-fence), consistent with
+  # net-to-grid metered generation. (ActLoad incl. BTF was used before calibration.)
+  load_column: Load
   load_power_factor: 0.95            # synthetic:fixed_pf
   # Line R and B: textbook typical values by voltage class. X comes from CODERS.
   # Sources/assumptions: Kundur, Power System Stability and Control, Table 6.1
@@ -161,8 +163,8 @@ opf:
     - {level: 4, name: load_shedding_slack, voll: 5000}
 
 scenarios:
-  run_name: s1000
-  n: 1000
+  run_name: s1250c   # calibrated structure (grid-served load, metered cogen/hydro/biomass)
+  n: 1250
   seed: 20261127
   n_processes: 4
   hours_year: 2024                 # real hours: planning-area load + metered wind/solar
@@ -180,3 +182,44 @@ scenarios:
   intertie_range: true                  # uniform in [-export, import] per neighbour (synthetic)
   relax_in_scenarios: true              # run the relaxation hierarchy and record the level
   export_pyg: true                      # write OPFData .pyg.json per scenario
+
+calibration:
+  # CODERS unit -> AESO metered asset where the code pattern fails (facility-level metering);
+  # output split across a facility's units in proportion to capacity (derived:facility_share)
+  aeso_asset_overrides:
+    BOW1: [BRR, BSP, CSC01, CSC02, GHT01, GHT02, GHT03, GHT04, HSH01, HSH02, HSH03, HSH04, ILK,
+           KNK01, KNK02, KNK03, PCT, RND01, RND02, SPR01, SPR02, TSS]
+    BIG: [BIG01, BIG02]
+    BRA: [BRA01, BRA02]
+    DKSN: [DKSN01, DKSN02, DKSN03]
+    OMRH: [OMRH01, OMRH02]
+    CRG1: [CRG01]
+    NX02: [NX21]
+    RB5: [RBL05]
+    VVW2: [VVW02]
+  # fuels whose hourly output is fixed to AESO metered output (not price-dispatched):
+  # cogeneration follows industrial process load, hydro follows water, biomass fuel supply
+  fixed_output_fuels: [gas_cogen, hydro, biomass]
+  dispatched_fuels: [gas_cc, gas_steam, gas_peaker]
+  # inverse optimisation: c1_unit = a_fuel + b_fuel * (1 - CF_unit_2024), fitted on DC-OPF
+  n_fit_hours: 24
+  n_val_hours: 12
+  hour_windows: [["2024-01-15", "2024-01-30"], ["2024-07-15", "2024-07-30"]]   # all-asset metered windows (interchange known)
+  seed: 7
+  init: {gas_cc: [40, 20], gas_steam: [55, 20], gas_peaker: [90, 30]}
+  bounds: [[10, 200], [0, 150]]
+  c2: 0.004
+  max_evals: 160
+  simplex_step: 15
+
+finetune:
+  scenario_run: s1250c          # calibrated scenarios
+  seed: 42
+  n_test: 150
+  n_val: 100
+  rounds: [10, 100, 1000]
+  epochs: {"10": 10, "100": 10, default: 4}   # CPU budget: fewer epochs for the 1000 round
+  batch_size: 8
+  lr: 1.0e-4
+  infeas_prob: 0.2              # share of feasible graphs perturbed by SyntheticMixedDataset
+  threads: 4

@@ -38,14 +38,45 @@ def _inputs(cfg):
                      usecols=["DT_MPT", "PLANNING_AREA", cfg["params"]["load_column"]])
     pa = pa.groupby(["DT_MPT", "PLANNING_AREA"])[cfg["params"]["load_column"]].sum().unstack()
     pa.index = pd.to_datetime(pa.index)
-    mv = pd.read_csv(next((raw / "aeso").glob(f"metered_renewables_{yr}-*.csv.gz")))
+    mv = pd.concat([pd.read_csv(f) for f in sorted((raw / "aeso").glob(f"metered_*_{yr}-01-01_{yr}-12-31.csv.gz"))])
     mv["t"] = pd.to_datetime(mv.begin_date_mpt)
     mv = mv.pivot_table(index="t", columns="asset_ID", values="metered_volume_mwh", aggfunc="sum")
     hours = pa.index.intersection(mv.index)
     gens = pd.read_csv(pdir / "generators.csv")
     loads = pd.read_csv(pdir / "loads.csv")
-    return {"pa": pa.loc[hours], "mv": mv.loc[hours], "hours": hours, "gens": gens, "loads": loads,
-            "net": sorted(pdir.glob("net_*.json"))[-1]}
+    cal = pdir / "calibration.json"
+    return {"pa": pa.loc[hours], "mv": mv.loc[hours].clip(lower=0), "hours": hours, "gens": gens, "loads": loads,
+            "net": sorted(pdir.glob("net_*.json"))[-1], "umap": unit_asset_map(cfg, gens),
+            "cal": json.loads(cal.read_text()) if cal.exists() else None}
+
+
+def unit_asset_map(cfg, gens) -> pd.DataFrame:
+    """CODERS unit -> (AESO metered asset, share of that asset's output).
+    Default: unit-code pattern; overrides for facility-level metering, with
+    output split across the facility's units by installed capacity."""
+    ov = {u: a for a, us in cfg.get("calibration", {}).get("aeso_asset_overrides", {}).items() for u in us}
+    g = gens[["unit_code", "aeso_asset_id", "p_max_mw", "fuel"]].copy()
+    g["asset"] = [ov.get(a, a) for a in g.aeso_asset_id]
+    g["share"] = g.p_max_mw / g.groupby("asset").p_max_mw.transform("sum")
+    g["src"] = np.where(g.aeso_asset_id.isin(ov), "derived:facility_metering_capacity_share",
+                        "derived:coders_unit_code_pattern")
+    return g.set_index("unit_code")
+
+
+def unit_actual(inp, h) -> pd.Series:
+    """Metered MW per CODERS unit at hour h (NaN where no metering)."""
+    um, row = inp["umap"], inp["mv"].loc[h]
+    return um.asset.map(row) * um.share
+
+
+def set_costs(net, c1_by_unit: dict, c2: float):
+    pc = net.poly_cost
+    gi = pc.et == "gen"
+    names = net.gen.name.reindex(pc.element[gi].values).values
+    for k, (idx, nm) in enumerate(zip(pc.index[gi], names)):
+        if nm in c1_by_unit:
+            pc.loc[idx, "cp1_eur_per_mw"] = c1_by_unit[nm]
+            pc.loc[idx, "cp2_eur_per_mw2"] = c2
 
 
 def sample_specs(cfg, inp) -> list[dict]:
@@ -110,24 +141,36 @@ def apply_spec(cfg, base, inp, sp) -> pp.pandapowerNet:
     area_base = L.groupby("planning_area").p_mw.transform("sum").values
     w = L.p_mw.values / area_base
     area_now = inp["pa"].loc[h].reindex(L.planning_area.values).fillna(0).values
-    eps = rng.uniform(-s["local_load_noise"], s["local_load_noise"], len(idx))
+    sig = sp.get("noise", s["local_load_noise"])
+    eps = rng.uniform(-sig, sig, len(idx))
     p = w * area_now * (1 + eps)
     tanphi = math.tan(math.acos(cfg["params"]["load_power_factor"]))
     n.load.loc[idx, "p_mw"] = p
     n.load.loc[idx, "q_mvar"] = p * tanphi
-    # wind / solar availability from metered output at hour h
+    # metered output at hour h: wind/solar set the available maximum; fixed-output
+    # fuels (cogeneration, hydro, biomass) are pinned to it. Units without metering
+    # use the fleet ratio of metered units of the same fuel.
     G = inp["gens"].set_index("unit_code")
-    mvh = inp["mv"].loc[h]
-    for f in ("wind", "solar"):
+    act = unit_actual(inp, h)
+    fixed = set(cfg.get("calibration", {}).get("fixed_output_fuels", []))
+    name_to_gi = pd.Series(n.gen.index, index=n.gen.name.values)
+    for f in sorted({"wind", "solar"} | fixed):
         units = G[G.fuel == f]
-        known = units[units.aeso_asset_id.isin(mvh.index)]
-        fleet_cf = float((mvh[known.aeso_asset_id].clip(lower=0).sum()) / max(known.p_max_mw.sum(), 1))
-        for code, u in units.iterrows():
-            cf = mvh.get(u.aeso_asset_id, np.nan) / u.p_max_mw
-            cf = fleet_cf if not np.isfinite(cf) else cf
-            gi = n.gen.index[n.gen.name == code]
-            n.gen.loc[gi, "max_p_mw"] = float(np.clip(cf, 0, 1) * u.p_max_mw)
-            n.gen.loc[gi, "p_mw"] = n.gen.loc[gi, "max_p_mw"] * 0.5
+        a = act.reindex(units.index)
+        known = a.notna()
+        ratio = float(a[known].sum() / max(units.p_max_mw[known].sum(), 1)) if known.any() else 0.0
+        mw = (a.where(known, ratio * units.p_max_mw)).clip(lower=0).clip(upper=units.p_max_mw)
+        gi = name_to_gi.reindex(units.index).dropna().astype(int)
+        mw = mw.reindex(gi.index).values
+        n.gen.loc[gi.values, "max_p_mw"] = mw
+        if f in fixed:
+            n.gen.loc[gi.values, "min_p_mw"] = mw
+            n.gen.loc[gi.values, "p_mw"] = mw
+        else:
+            n.gen.loc[gi.values, "min_p_mw"] = 0.0
+            n.gen.loc[gi.values, "p_mw"] = 0.5 * mw
+    if inp.get("cal") and inp["cal"].get("use_costs", True):
+        set_costs(n, inp["cal"]["c1_by_unit"], inp["cal"]["c2"])
     # HVDC fixed schedules
     loss = cfg["topology"]["hvdc_loss_percent"] / 100
     for name, mw in sp["hvdc_mw"].items():
@@ -136,7 +179,14 @@ def apply_spec(cfg, base, inp, sp) -> pp.pandapowerNet:
         n.gen.loc[gi, ["p_mw", "min_p_mw", "max_p_mw"]] = mw * (1 - loss)
     # interties: uniform in [-export, import] per neighbour, capped at 90% of the
     # summed tie-line ratings and split over tie buses in proportion to rating
-    for nb, b in cfg["topology"]["boundary"].items():
+    if "net_import_mw" in sp:        # observed total interchange, split by tie rating
+        gi = n.gen.index[n.gen.name.astype(str).str.startswith("intertie_")]
+        rate = np.array([_tie_rating(n, n.gen.bus[g]) for g in gi])
+        mw = float(np.clip(sp["net_import_mw"], -0.9 * rate.sum(), 0.9 * rate.sum()))
+        for g, r in zip(gi, rate):
+            n.gen.loc[g, ["p_mw", "min_p_mw", "max_p_mw"]] = mw * r / rate.sum()
+    else:
+      for nb, b in cfg["topology"]["boundary"].items():
         gi = n.gen.index[n.gen.name.astype(str).str.startswith(f"intertie_{nb}_")]
         if not len(gi):
             continue
