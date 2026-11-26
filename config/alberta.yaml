@@ -41,6 +41,10 @@ sources:
       assetlist: "/assetlist-api/v1/assetlist"
       metered_volume: "/meteredvolume-api/v1/meteredvolume/details"
       ail: "/actualforecast-api/v1/load/albertaInternalLoad"
+      gen_capacity: "/aiesgencapacity-api/v1/AIESGenCapacity"   # endpoint supplied by user
+    # hourly capacity by fuel / sub-fuel type (MC, AC, outages); not per unit
+    gen_capacity_start: "2024-01-01"
+    gen_capacity_end: "2025-12-31"
     ail_start: "2023-01-01"
     ail_end: "2025-12-31"
     # all assets: max 16 days per call. 2025-01 returned empty at time of

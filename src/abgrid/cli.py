@@ -12,7 +12,7 @@ def main(argv=None):
     ap.add_argument("--config", default=None)
     sub = ap.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("collect")
-    c.add_argument("--only", default="goa,osm,aeso,aeso_files")
+    c.add_argument("--only", default="goa,osm,aeso,gen_capacity,aeso_files")
     sub.add_parser("report-phase1")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
@@ -30,6 +30,9 @@ def main(argv=None):
         if "aeso" in only:
             from .collect import aeso
             aeso.fetch(cfg, raw)
+        if "gen_capacity" in only:
+            from .collect import aeso
+            aeso.fetch_gen_capacity(cfg, raw)
         if "aeso_files" in only:
             from .collect import aeso_files
             aeso_files.fetch(cfg, raw)

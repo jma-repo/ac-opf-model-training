@@ -75,3 +75,25 @@ def fetch(cfg: dict, raw_root: Path):
                note=f"{len(df)} rows, {df.asset_ID.nunique()} assets")
         log.info("metered volume %s..%s: %d rows, %d assets", w[0], w[1], len(df),
                  df.asset_ID.nunique())
+
+
+def fetch_gen_capacity(cfg: dict, raw_root: Path):
+    """AIES Gen Capacity: hourly MC/AC/outage MW aggregated by fuel type."""
+    a = cfg["sources"]["aeso"]
+    out = raw_root / "aeso"
+    out.mkdir(parents=True, exist_ok=True)
+    recs = []
+    for s, e in _windows(a["gen_capacity_start"], a["gen_capacity_end"], 31):
+        url, d = _call(cfg, "gen_capacity", {"startDate": s, "endDate": e})
+        for ft in d:
+            for h in ft["Hours"]:
+                recs.append({"fuel_type": ft["fuel_type"], "sub_fuel_type": ft.get("sub_fuel_type"),
+                             "begin_datetime_utc": h["begin_datetime_utc"],
+                             **{k.replace(" ", "_"): v for k, v in h["outage_grouping"].items()}})
+        log.info("gen capacity %s..%s", s, e)
+    df = pd.DataFrame(recs)
+    f = out / "aies_gen_capacity_hourly.csv.gz"
+    df.to_csv(f, index=False)
+    record(raw_root, f, url, {"startDate": a["gen_capacity_start"], "endDate": a["gen_capacity_end"],
+                              "chunk_days": 31}, note=f"{len(df)} rows")
+    return f
