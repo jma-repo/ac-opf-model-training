@@ -1,0 +1,54 @@
+element,attribute,n,open_%,derived_%,synthetic_%,sources
+bus,name,982,99.4,0.6,0.0,open:coders=976; derived:node_code=6
+bus,node_code,982,100.0,0.0,0.0,open:coders=982
+bus,lat,982,99.4,0.6,0.0,open:coders=976; derived:neighbour_node_location=6
+bus,lon,982,99.4,0.6,0.0,open:coders=976; derived:neighbour_node_location=6
+bus,base_kv,982,0.0,100.0,0.0,derived:kv_class_of_open_line_voltage=982
+bus,node_type,982,99.4,0.6,0.0,open:coders=976; derived:intertie_table=6
+bus,planning_area,982,0.0,100.0,0.0,derived:within_aeso_planning_area=982
+bus,is_boundary,982,100.0,0.0,0.0,open:coders_interties=982
+branch,from_bus,1171,0.0,100.0,0.0,derived:coders_node_and_kv_class=1171
+branch,to_bus,1171,0.0,100.0,0.0,derived:coders_node_and_kv_class=1171
+branch,circuit_id,1171,100.0,0.0,0.0,open:coders=1171
+branch,voltage_kv,1171,100.0,0.0,0.0,open:coders=1171
+branch,length_km,1171,100.0,0.0,0.0,open:coders=1171
+branch,n_circuits,1171,100.0,0.0,0.0,open:coders=1171
+branch,x_ohm,1171,100.0,0.0,0.0,open:coders=1171
+branch,rate_summer_mw,1171,100.0,0.0,0.0,open:coders=1171
+branch,rate_winter_mw,1171,100.0,0.0,0.0,open:coders=1171
+branch,geometry,1171,0.0,57.8,42.2,synthetic:straight_line=494; derived:goa_path_match=346; derived:goa_path_match_crowfly=331
+transformer,hv_bus,118,0.0,100.0,0.0,derived:multi_voltage_node_adjacent_classes=118
+transformer,lv_bus,118,0.0,100.0,0.0,derived:multi_voltage_node_adjacent_classes=118
+transformer,hv_kv,118,0.0,100.0,0.0,derived:multi_voltage_node_adjacent_classes=118
+transformer,lv_kv,118,0.0,100.0,0.0,derived:multi_voltage_node_adjacent_classes=118
+dc_line,from_bus,2,0.0,0.0,100.0,synthetic:config_hvdc_public_project_description=2
+dc_line,to_bus,2,0.0,0.0,100.0,synthetic:config_hvdc_public_project_description=2
+dc_line,p_max_mw,2,0.0,0.0,100.0,synthetic:config_hvdc_public_project_description=2
+dc_line,name,2,0.0,0.0,100.0,synthetic:config_hvdc_public_project_description=2
+boundary,bus,6,100.0,0.0,0.0,open:coders_interties=6
+boundary,import_max_mw,6,0.0,0.0,100.0,synthetic:config_intertie_limit_split_evenly=6
+boundary,export_max_mw,6,0.0,0.0,100.0,synthetic:config_intertie_limit_split_evenly=6
+boundary,neighbour,6,100.0,0.0,0.0,open:coders_interties=6
+branch_e,x_ohm_model,1171,100.0,0.0,0.0,open:coders=1171
+branch_e,r_ohm,1171,0.0,0.0,100.0,synthetic:r_from_open_x_with_textbook_xr_ratio=1171
+branch_e,b_us,1171,0.0,0.0,100.0,synthetic:textbook_b_per_km_x_length=1171
+branch_e,length_model_km,1171,85.6,14.4,0.0,open:coders=1002; derived:goa_path_length_coders_length_flagged=169
+branch_e,rate_mva,1171,0.0,100.0,0.0,derived:coders_ttc_winter_mw_as_mva=1171
+transformer_e,sn_mva,118,0.0,15.3,84.7,synthetic:default_by_voltage_pair=100; derived:sized_to_connected_line_ratings=18
+transformer_e,vk_percent,118,0.0,0.0,100.0,synthetic:default_by_voltage_pair=118
+transformer_e,vkr_percent,118,0.0,0.0,100.0,synthetic:default_by_voltage_pair=118
+generator,unit_code,245,100.0,0.0,0.0,open:coders=245
+generator,aeso_asset_id,245,0.0,100.0,0.0,derived:coders_unit_code_pattern=245
+generator,bus,245,0.0,100.0,0.0,derived:coders_node_and_kv_class=226; derived:coders_node_other_kv=18; derived:nearest_bus_by_location=1
+generator,p_max_mw,245,100.0,0.0,0.0,open:coders=245
+generator,fuel,245,0.0,100.0,0.0,derived:coders_gen_type_to_fuel=237; derived:arxiv_aeso_type_override=8
+generator,availability,245,0.0,40.0,60.0,synthetic:full_availability=147; derived:aeso_metered_volume_unit=89; derived:aeso_metered_volume_fleet_cf=9
+generator,p_min_mw,245,0.0,0.0,100.0,synthetic:p_min_frac=245
+generator,q_max_mvar,245,0.0,0.0,100.0,synthetic:q_limits_frac_of_p_max_by_fuel=245
+generator,q_min_mvar,245,0.0,0.0,100.0,synthetic:q_limits_frac_of_p_max_by_fuel=245
+generator,cost_c1,245,0.0,0.0,100.0,synthetic:illustrative_cost_by_fuel=245
+generator,cost_c2,245,0.0,0.0,100.0,synthetic:illustrative_cost_by_fuel=245
+load,bus,615,0.0,100.0,0.0,derived:substation_size_line_ratings_within_area=614; derived:any_bus_in_area_line_ratings=1
+load,planning_area,615,0.0,100.0,0.0,derived:within_aeso_planning_area=615
+load,p_mw,615,0.0,100.0,0.0,derived:open_aeso_planning_area_ActLoad_allocated=615
+load,q_mvar,615,0.0,0.0,100.0,synthetic:fixed_power_factor=615

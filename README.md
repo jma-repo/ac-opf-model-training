@@ -22,8 +22,9 @@ states what share of each attribute came from open data.
 | Phase | Status |
 |---|---|
 | 1. Collect open data | done except OSM (extract pending upload) — `outputs/phase1/` |
-| 2. Bus-branch topology | in review — `outputs/phase2/phase2_report.md` |
-| 3–7 | not started |
+| 2. Bus-branch topology | done — `outputs/phase2/phase2_report.md` |
+| 3. Electrical parameters + base case | in review — `outputs/phase3/phase3_report.md` (DC- and AC-OPF solve at relaxation level 0) |
+| 4–7 | not started (GridSFM converter ready: `src/abgrid/fm/to_gridsfm.py`) |
 
 ## Reproducing
 ```bash
@@ -32,6 +33,9 @@ python -m abgrid.cli collect            # downloads into data/raw/ (cached)
 python -m abgrid.cli report-phase1      # outputs/phase1/
 python -m abgrid.cli build-topology     # data/interim/topology/
 python -m abgrid.cli report-phase2      # outputs/phase2/ (maps, provenance summary)
+python -m abgrid.cli build-params       # Phase 3 parameters + pandapower net
+python -m abgrid.cli solve-base         # DC-OPF then AC-OPF (relaxation hierarchy)
+python -m abgrid.cli report-phase3
 pytest -q                               # topology tests
 ```
 CODERS is optional and needs `CODERS_API_KEY` (sent as a `key` URL parameter over HTTPS;
@@ -69,6 +73,17 @@ https://www.openstreetmap.org/copyright.
 - Data-quality findings are flagged, never silently fixed: CODERS segment
   lengths inconsistent with GoA routes; 7 nodes with likely coordinate errors;
   arXiv coordinates offset by tens–hundreds of km (used only for ID/voltage checks).
+
+## Parameters and assumptions (Phase 3)
+- Line X and thermal ratings (winter/summer TTC) are open CODERS data; R from X
+  with textbook X/R by class; B from textbook µS/km × route length.
+- Transformer impedances/ratings, generator reactive limits, p_min and **cost
+  curves are synthetic and illustrative** (see `config/alberta.yaml`).
+- Loads: AESO planning-area hourly `ActLoad` allocated to substations by
+  connected line capacity; fixed power factor 0.95.
+- HVDC links modelled as fixed schedules (sending load / receiving generator).
+- Solver: pandapower 3.5 / PYPOWER interior point (requires scipy < 1.14).
+- Provenance across all tracked attributes: `outputs/provenance_report.csv`.
 
 ## Limitations
 Approximate topology, synthetic electrical parameters, illustrative cost curves.

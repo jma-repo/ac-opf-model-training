@@ -95,13 +95,67 @@ topology:
   hvdc:
     - {name: WATL, from_node: AB_330P_DSS, to_node: AB_102S_DSS, p_max_mw: 1000}
     - {name: EATL, from_node: AB_2029S_TSS, to_node: AB_2075S_DSS, p_max_mw: 1000}
+  # HVDC is modelled as a fixed schedule (load at sending end, generator at
+  # receiving end minus losses); pandapower's dcline OPF model allowed
+  # unphysical reverse flow/losses in testing. Varied in scenarios (Phase 5).
+  hvdc_schedule_mw: {WATL: 600, EATL: 600}   # + = north (from) -> south (to)
+  hvdc_loss_percent: 1.5
   # interties as boundary buses; limits are illustrative, configurable
   boundary:
     BC:  {nodes: [AB_ABBC01_IPT, AB_ABBC02_IPT, AB_ABBC03_IPT, AB_ABBC04_IPT], import_max_mw: 800, export_max_mw: 800}
     SK:  {nodes: [AB_ABSK01_IPT], import_max_mw: 150, export_max_mw: 150}
     MATL: {nodes: [AB_ABUS01_INT], import_max_mw: 300, export_max_mw: 300}
 
+
+params:
+  snapshot_mpt: "2024-01-25 18:00"   # base case hour (winter evening; metered data available)
+  load_column: ActLoad               # AESO planning-area load incl. behind-the-fence (~AIL)
+  load_power_factor: 0.95            # synthetic:fixed_pf
+  # Line R and B: textbook typical values by voltage class. X comes from CODERS.
+  # Sources/assumptions: Kundur, Power System Stability and Control, Table 6.1
+  # (230 kV: r 0.050, x 0.488 ohm/km, b 3.371 uS/km; 500 kV: r 0.028, x 0.325,
+  # b 5.2); 69/138 kV: typical single 266/477 kcmil ACSR (Glover, Sarma &
+  # Overbye, Power System Analysis and Design, App. A). x_ohm_per_km only used
+  # as a fallback/sanity reference.
+  line_defaults:
+    69:  {r_ohm_per_km: 0.210, x_ohm_per_km: 0.45, b_us_per_km: 3.6}
+    138: {r_ohm_per_km: 0.120, x_ohm_per_km: 0.48, b_us_per_km: 3.4}
+    240: {r_ohm_per_km: 0.050, x_ohm_per_km: 0.49, b_us_per_km: 3.4}
+    500: {r_ohm_per_km: 0.028, x_ohm_per_km: 0.33, b_us_per_km: 5.2}
+  # R derived from open X using the X/R ratio implied by the table above
+  min_x_ohm: 0.01                    # floor for zero/near-zero reactances
+  # Transformers: typical values by voltage pair (synthetic)
+  transformer_defaults:
+    "500/240": {sn_mva: 1200, vk_percent: 14.0, vkr_percent: 0.25}
+    "240/138": {sn_mva: 400,  vk_percent: 12.0, vkr_percent: 0.30}
+    "240/69":  {sn_mva: 150,  vk_percent: 10.0, vkr_percent: 0.40}
+    "138/69":  {sn_mva: 100,  vk_percent: 9.0,  vkr_percent: 0.50}
+    "500/138": {sn_mva: 600,  vk_percent: 13.0, vkr_percent: 0.30}
+  # rating = max(default, sizing_factor * min(sum of HV-side, LV-side line ratings))
+  transformer_sizing_factor: 0.5
+  # Generators. Cost curves are ILLUSTRATIVE ONLY (CAD/MWh), by fuel type.
+  fuels:
+    wind:        {c1: 0.0,  c2: 0.0,   q_max_frac: 0.33, q_min_frac: -0.33}
+    solar:       {c1: 0.0,  c2: 0.0,   q_max_frac: 0.33, q_min_frac: -0.33}
+    hydro:       {c1: 8.0,  c2: 0.002, q_max_frac: 0.5,  q_min_frac: -0.3}
+    biomass:     {c1: 25.0, c2: 0.005, q_max_frac: 0.5,  q_min_frac: -0.3}
+    gas_cogen:   {c1: 30.0, c2: 0.004, q_max_frac: 0.5,  q_min_frac: -0.3}
+    gas_cc:      {c1: 40.0, c2: 0.004, q_max_frac: 0.5,  q_min_frac: -0.3}
+    gas_steam:   {c1: 55.0, c2: 0.005, q_max_frac: 0.5,  q_min_frac: -0.3}
+    gas_peaker:  {c1: 90.0, c2: 0.010, q_max_frac: 0.5,  q_min_frac: -0.3}
+  coders_fuel_map: {wind_ons: wind, solar_PV: solar, hydro_run: hydro, hydro_daily: hydro,
+                    biomass: biomass, NG_CG: gas_cogen, NG_CC: gas_cc, NG_SC: gas_peaker}
+  arxiv_fuel_override: {"Gas Fired Steam": gas_steam}   # converted coal units mis-typed NG_CC
+  p_min_frac: 0.0          # synthetic: no unit commitment in OPF base case
+  intertie_schedule_mw: {BC: 0, SK: 0, MATL: 0}   # net import (+) fixed in base case
+
 opf:
   vmin_pu: 0.95
   vmax_pu: 1.05
   base_mva: 100
+  # documented relaxation hierarchy, applied in order only if infeasible
+  relaxations:
+    - {level: 1, name: line_ratings_x1.2, rating_factor: 1.2}
+    - {level: 2, name: voltage_0.90-1.10, vmin_pu: 0.90, vmax_pu: 1.10}
+    - {level: 3, name: reactive_support, svc_mvar: 200, svc_kv_min: 240}
+    - {level: 4, name: load_shedding_slack, voll: 5000}

@@ -16,6 +16,9 @@ def main(argv=None):
     sub.add_parser("report-phase1")
     sub.add_parser("build-topology")
     sub.add_parser("report-phase2")
+    sub.add_parser("build-params")
+    sub.add_parser("solve-base")
+    sub.add_parser("report-phase3")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     cfg = load_config(args.config)
@@ -47,6 +50,20 @@ def main(argv=None):
     elif args.cmd == "build-topology":
         from .conflate import build
         build.build(cfg)
+    elif args.cmd == "build-params":
+        from .params import build as pbuild
+        pbuild.build(cfg)
+    elif args.cmd == "solve-base":
+        import json as _j
+        from .solve import opf
+        d = path(cfg, "interim_dir") / "params"
+        net = sorted(d.glob("net_*.json"))[-1]
+        out = path(cfg, "output_dir") / "phase3"
+        out.mkdir(parents=True, exist_ok=True)
+        print(_j.dumps(opf.solve(cfg, net, out), indent=1, default=float))
+    elif args.cmd == "report-phase3":
+        from .report import phase3
+        phase3.run(cfg)
     elif args.cmd == "report-phase2":
         from .report import phase2
         phase2.run(cfg)

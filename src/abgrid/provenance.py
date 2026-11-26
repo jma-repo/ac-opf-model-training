@@ -22,6 +22,12 @@ SCHEMA: dict[str, list[str]] = {
     "transformer": ["hv_bus", "lv_bus", "hv_kv", "lv_kv"],
     "dc_line": ["from_bus", "to_bus", "p_max_mw", "name"],
     "boundary": ["bus", "import_max_mw", "export_max_mw", "neighbour"],
+    # Phase 3 (electrical parameters)
+    "branch_e": ["x_ohm_model", "r_ohm", "b_us", "length_model_km", "rate_mva"],
+    "transformer_e": ["sn_mva", "vk_percent", "vkr_percent"],
+    "generator": ["unit_code", "aeso_asset_id", "bus", "p_max_mw", "fuel", "availability",
+                  "p_min_mw", "q_max_mvar", "q_min_mvar", "cost_c1", "cost_c2"],
+    "load": ["bus", "planning_area", "p_mw", "q_mvar"],
 }
 
 
