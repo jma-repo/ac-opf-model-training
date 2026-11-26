@@ -19,6 +19,8 @@ def main(argv=None):
     sub.add_parser("build-params")
     sub.add_parser("solve-base")
     sub.add_parser("report-phase3")
+    p4 = sub.add_parser("phase4")
+    p4.add_argument("--skip-stress", action="store_true")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     cfg = load_config(args.config)
@@ -61,6 +63,9 @@ def main(argv=None):
         out = path(cfg, "output_dir") / "phase3"
         out.mkdir(parents=True, exist_ok=True)
         print(_j.dumps(opf.solve(cfg, net, out), indent=1, default=float))
+    elif args.cmd == "phase4":
+        from .report import phase4
+        phase4.run(cfg, skip_stress=args.skip_stress)
     elif args.cmd == "report-phase3":
         from .report import phase3
         phase3.run(cfg)

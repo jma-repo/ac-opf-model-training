@@ -23,8 +23,9 @@ states what share of each attribute came from open data.
 |---|---|
 | 1. Collect open data | done except OSM (extract pending upload) — `outputs/phase1/` |
 | 2. Bus-branch topology | done — `outputs/phase2/phase2_report.md` |
-| 3. Electrical parameters + base case | in review — `outputs/phase3/phase3_report.md` (DC- and AC-OPF solve at relaxation level 0) |
-| 4–7 | not started (GridSFM converter ready: `src/abgrid/fm/to_gridsfm.py`) |
+| 3. Electrical parameters + base case | done — `outputs/phase3/phase3_report.md` (DC- and AC-OPF solve at relaxation level 0); GridSFM zero-shot smoke test run |
+| 4. Exports, verification, relaxation hierarchy | in review — `outputs/phase4/phase4_report.md` |
+| 5–7 | not started |
 
 ## Reproducing
 ```bash
@@ -36,6 +37,7 @@ python -m abgrid.cli report-phase2      # outputs/phase2/ (maps, provenance summ
 python -m abgrid.cli build-params       # Phase 3 parameters + pandapower net
 python -m abgrid.cli solve-base         # DC-OPF then AC-OPF (relaxation hierarchy)
 python -m abgrid.cli report-phase3
+python -m abgrid.cli phase4             # MATPOWER / PowerModels / GridSFM exports, round trip, stress test
 pytest -q                               # topology tests
 ```
 CODERS is optional and needs `CODERS_API_KEY` (sent as a `key` URL parameter over HTTPS;

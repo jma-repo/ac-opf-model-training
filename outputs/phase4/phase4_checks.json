@@ -1,0 +1,106 @@
+{
+ "roundtrip": {
+  "objective_original": 280752.5811922254,
+  "objective_roundtrip": 280844.32,
+  "objective_rel_diff": 0.0003267651005478417,
+  "total_pg_original": 12506.3,
+  "total_pg_roundtrip": 12507.5,
+  "vm_max_abs_diff": 0.018509179935326747,
+  "n_bus": 982,
+  "n_units": 253,
+  "n_gen_original": 253,
+  "n_branch": 1289,
+  "n_branch_original": 1289
+ },
+ "sanity": {
+  "angle_diff_max_deg": 27.12,
+  "angle_diff_p99_deg": 7.85,
+  "branches_angle_gt_30deg": 0,
+  "lmp_dc_ac_correlation": 0.903,
+  "gen_minus_load_mw_ac": 327.8,
+  "losses_%_ac": 2.99
+ },
+ "stress_load_scaling": [
+  {
+   "load_factor": 1.0,
+   "load_mw": 10978.0,
+   "feasible": true,
+   "relaxation_level": 0,
+   "relaxation_name": "nominal",
+   "seconds_total": 9.8,
+   "losses_%": 2.99,
+   "load_shed_mw": 0.0,
+   "lmp_max": 138.01,
+   "vm_min": 0.95,
+   "flags": []
+  },
+  {
+   "load_factor": 1.1,
+   "load_mw": 12076.0,
+   "feasible": true,
+   "relaxation_level": 0,
+   "relaxation_name": "nominal",
+   "seconds_total": 10.5,
+   "losses_%": 3.06,
+   "load_shed_mw": 0.0,
+   "lmp_max": 145.84,
+   "vm_min": 0.95,
+   "flags": []
+  },
+  {
+   "load_factor": 1.2,
+   "load_mw": 13174.0,
+   "feasible": true,
+   "relaxation_level": 1,
+   "relaxation_name": "line_ratings_x1.2",
+   "seconds_total": 20.5,
+   "losses_%": 3.38,
+   "load_shed_mw": 0.0,
+   "lmp_max": 149.42,
+   "vm_min": 0.95,
+   "flags": [
+    "21 lines >100%"
+   ]
+  },
+  {
+   "load_factor": 1.3,
+   "load_mw": 14272.0,
+   "feasible": true,
+   "relaxation_level": 1,
+   "relaxation_name": "line_ratings_x1.2",
+   "seconds_total": 23.7,
+   "losses_%": 3.21,
+   "load_shed_mw": 0.0,
+   "lmp_max": 221.48,
+   "vm_min": 0.95,
+   "flags": [
+    "28 lines >100%"
+   ]
+  },
+  {
+   "load_factor": 1.4,
+   "load_mw": 15370.0,
+   "feasible": true,
+   "relaxation_level": 4,
+   "relaxation_name": "load_shedding_slack",
+   "seconds_total": 51.0,
+   "losses_%": 3.34,
+   "load_shed_mw": 224.9,
+   "lmp_max": 9027.39,
+   "vm_min": 0.9,
+   "flags": [
+    "37 lines >100%",
+    "225 MW load shed",
+    "LMP outside [-100, 1000]"
+   ]
+  },
+  {
+   "load_factor": 1.5,
+   "load_mw": 16468.0,
+   "feasible": false,
+   "relaxation_level": null,
+   "relaxation_name": null,
+   "seconds_total": 55.5
+  }
+ ]
+}
