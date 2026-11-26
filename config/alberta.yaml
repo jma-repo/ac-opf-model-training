@@ -61,7 +61,14 @@ sources:
       planning_area_boundaries: "/assets/Uploads/AESO-Planning-Areas-2020-06-23.zip"
       planning_regions_pdf: "/assets/Uploads/Planning-Regions.pdf"
   coders:
-    base_url: "https://api.sesit.ca"
+    base_url: "https://api.sesit.ca"   # HTTPS only: key is a URL query param
+    key_env: CODERS_API_KEY            # optional source; skipped if unset
+    # table names are confirmed from /tables at first run before use
+    tables: [generators, substations, transmission_lines]
+    filters:
+      generators: {province: AB}
+      substations: {province: AB}
+      transmission_lines: {province: AB}
   arxiv_dataset:
     arxiv_id: "2504.07870"
 

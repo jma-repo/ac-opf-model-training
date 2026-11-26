@@ -12,7 +12,7 @@ def main(argv=None):
     ap.add_argument("--config", default=None)
     sub = ap.add_subparsers(dest="cmd", required=True)
     c = sub.add_parser("collect")
-    c.add_argument("--only", default="goa,osm,aeso,gen_capacity,aeso_files")
+    c.add_argument("--only", default="goa,osm,aeso,gen_capacity,aeso_files,coders")
     sub.add_parser("report-phase1")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
@@ -33,6 +33,12 @@ def main(argv=None):
         if "gen_capacity" in only:
             from .collect import aeso
             aeso.fetch_gen_capacity(cfg, raw)
+        if "coders" in only:
+            from .collect import coders
+            try:
+                coders.fetch(cfg, raw)
+            except coders.CodersError as e:
+                logging.getLogger("abgrid").warning("CODERS skipped: %s", e)
         if "aeso_files" in only:
             from .collect import aeso_files
             aeso_files.fetch(cfg, raw)
