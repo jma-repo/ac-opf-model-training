@@ -24,8 +24,9 @@ states what share of each attribute came from open data.
 | 1. Collect open data | done except OSM (extract pending upload) — `outputs/phase1/` |
 | 2. Bus-branch topology | done — `outputs/phase2/phase2_report.md` |
 | 3. Electrical parameters + base case | done — `outputs/phase3/phase3_report.md` (DC- and AC-OPF solve at relaxation level 0); GridSFM zero-shot smoke test run |
-| 4. Exports, verification, relaxation hierarchy | in review — `outputs/phase4/phase4_report.md` |
-| 5–7 | not started |
+| 4. Exports, verification, relaxation hierarchy | done — `outputs/phase4/phase4_report.md` (PowerModels + Ipopt cross-check matches) |
+| 5. Scenarios | in review — `outputs/phase5/phase5_report.md` (1,000 scenarios) |
+| 6–7 | not started; siting visual prototype in `outputs/visual/` |
 
 ## Reproducing
 ```bash
@@ -38,6 +39,8 @@ python -m abgrid.cli build-params       # Phase 3 parameters + pandapower net
 python -m abgrid.cli solve-base         # DC-OPF then AC-OPF (relaxation hierarchy)
 python -m abgrid.cli report-phase3
 python -m abgrid.cli phase4             # MATPOWER / PowerModels / GridSFM exports, round trip, stress test
+python -m abgrid.cli scenarios          # Phase 5: config `scenarios` block (n, families, seed)
+julia src/abgrid/julia/solve_pm.jl outputs/phase4/alberta_base.m out.json   # PowerModels cross-check
 pytest -q                               # topology tests
 ```
 CODERS is optional and needs `CODERS_API_KEY` (sent as a `key` URL parameter over HTTPS;
