@@ -1,0 +1,16 @@
+[project]
+name = "abgrid"
+version = "0.1.0"
+description = "Approximate open-data model of the Alberta HV transmission grid for OPF / grid foundation model research (NOT AESO's actual grid)"
+requires-python = ">=3.11,<3.13"
+dependencies = ["requests", "pyyaml", "pandas", "geopandas", "shapely", "pyproj", "folium", "matplotlib", "tqdm", "networkx"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

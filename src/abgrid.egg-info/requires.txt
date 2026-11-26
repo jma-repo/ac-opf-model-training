@@ -1,0 +1,13 @@
+requests
+pyyaml
+pandas
+geopandas
+shapely
+pyproj
+folium
+matplotlib
+tqdm
+networkx
+
+[dev]
+pytest

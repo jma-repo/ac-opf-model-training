@@ -1,0 +1,75 @@
+# Single source of truth for the approximate Alberta open-data grid model.
+# NOTE: this model only APPROXIMATES the Alberta system. It is NOT AESO's grid.
+project:
+  name: alberta-open-grid
+  seed: 20261126
+  data_dir: data
+  raw_dir: data/raw
+  interim_dir: data/interim
+  output_dir: outputs
+
+region:
+  # Alberta bounding box (WGS84 / NAD83 lon-lat): W, S, E, N
+  bbox: [-120.01, 48.99, -109.99, 60.01]
+  # Overpass is queried in tiles of this size (degrees) to respect limits
+  tile_deg: [1.25, 1.375]
+  crs_geographic: "EPSG:4269"
+  crs_projected: "EPSG:3400"   # NAD83 / Alberta 10-TM (Forest), metres
+
+sources:
+  goa_powerlines:
+    url: "https://geospatial.alberta.ca/titan/rest/services/utility/access_utility/MapServer/15/query"
+    page_size: 1000
+    licence: "Open Government Licence - Alberta"
+  osm:
+    overpass_endpoints:
+      # overpass-api.de resets TLS through this environment's egress at
+      # collection time; the kumi mirror serves the same OSM data.
+      - "https://overpass.kumi.systems/api/interpreter"
+      - "https://overpass-api.de/api/interpreter"
+    geofabrik_pbf: "https://download.geofabrik.de/north-america/canada/alberta-latest.osm.pbf"
+    pause_s: 15          # pause between Overpass tile queries
+    rate_limit_wait_s: [60, 120, 240, 480]   # backoff on HTTP 429
+    timeout_s: 300
+    power_tags: [line, minor_line, cable, substation, plant, generator]
+    licence: "ODbL 1.0 (c) OpenStreetMap contributors"
+  aeso:
+    base_url: "https://apimgw.aeso.ca/public"
+    key_env: AESO_API_KEY      # header API-KEY; value never logged
+    key_header: API-KEY
+    endpoints:
+      assetlist: "/assetlist-api/v1/assetlist"
+      metered_volume: "/meteredvolume-api/v1/meteredvolume/details"
+      ail: "/actualforecast-api/v1/load/albertaInternalLoad"
+    ail_start: "2023-01-01"
+    ail_end: "2025-12-31"
+    # all assets: max 16 days per call. 2025-01 returned empty at time of
+    # collection, so 2024 winter + summer windows are used.
+    metered_volume_windows:
+      - ["2024-01-15", "2024-01-30"]
+      - ["2024-07-15", "2024-07-30"]
+  aeso_files:   # from www.aeso.ca Data Requests page
+    base_url: "https://www.aeso.ca"
+    files:
+      planning_area_load_2023: "/assets/Uploads/data-requests/Planning-Area-Load/Planning-Area-Load-Hourly-2023.zip"
+      planning_area_load_2024: "/assets/Uploads/data-requests/Planning-Area-Load/Planning-Area-Load-Hourly-2024.zip"
+      planning_area_load_2025: "/assets/Uploads/data-requests/Planning-Area-Load/Planning-Area-Load-Hourly-2025.zip"
+      planning_area_boundaries: "/assets/Uploads/AESO-Planning-Areas-2020-06-23.zip"
+      planning_regions_pdf: "/assets/Uploads/Planning-Regions.pdf"
+  coders:
+    base_url: "https://api.sesit.ca"
+  arxiv_dataset:
+    arxiv_id: "2504.07870"
+
+topology:
+  min_kv: 69
+  kv_classes: [69, 72, 138, 144, 240, 260, 500]
+  match_buffer_m: 50
+  match_min_overlap: 0.6
+  substation_snap_m: 300
+  stitch_tol_m: 25
+
+opf:
+  vmin_pu: 0.95
+  vmax_pu: 1.05
+  base_mva: 100
