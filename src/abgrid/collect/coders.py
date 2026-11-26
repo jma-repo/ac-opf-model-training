@@ -51,7 +51,11 @@ def fetch(cfg: dict, raw_root: Path):
     record(raw_root, f, url)                       # params never include the key
     log.info("CODERS tables: %s", tables)
     for t in c["tables"]:
-        url, data = _get(cfg, t, c.get("filters", {}).get(t, {}))
+        try:
+            url, data = _get(cfg, t, c.get("filters", {}).get(t, {}))
+        except CodersError as e:          # one bad table must not stop the rest
+            log.warning("CODERS %s skipped: %s", t, e)
+            continue
         f = out / f"{t}.json"
         f.write_text(json.dumps(data))
         n = len(data) if isinstance(data, list) else "?"

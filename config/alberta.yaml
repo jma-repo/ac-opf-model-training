@@ -64,21 +64,42 @@ sources:
     base_url: "https://api.sesit.ca"   # HTTPS only: key is a URL query param
     key_env: CODERS_API_KEY            # optional source; skipped if unset
     # table names are confirmed from /tables at first run before use
-    tables: [generators, substations, transmission_lines]
+    tables: [generators, substations, transmission_lines, nodes, junctions,
+             interjurisdictional_interties, transmission_generic, storage, data_glossary]
     filters:
       generators: {province: AB}
       substations: {province: AB}
       transmission_lines: {province: AB}
+      nodes: {province: AB}
+      junctions: {province: AB}
+      storage: {province: AB}
   arxiv_dataset:
     arxiv_id: "2504.07870"
 
 topology:
   min_kv: 69
-  kv_classes: [69, 72, 138, 144, 240, 260, 500]
-  match_buffer_m: 50
-  match_min_overlap: 0.6
-  substation_snap_m: 300
-  stitch_tol_m: 25
+  # nominal kV -> voltage class (base kV). Alberta uses 69/72, 138/144, 240, 500.
+  kv_class_map: {69: 69, 72: 69, 115: 138, 138: 138, 144: 138, 230: 240, 240: 240, 260: 240, 500: 500}
+  # GoA geometry matching (CODERS branch endpoints -> path on stitched GoA network)
+  stitch_tol_m: 25          # GoA polyline endpoints within this distance are joined
+  substation_star_m: 500    # substation joined to all GoA vertices within this radius
+  substation_snap_m: 1500   # else to the single nearest vertex within this distance
+  match_ratio: [0.75, 1.35] # accepted GoA path length / CODERS route length
+  detour_ratio: [1.0, 1.6]  # else accepted GoA path length / crow-fly distance
+  length_flag_ratio: [0.5, 2.0]  # CODERS length vs GoA path outside this -> flagged
+  # OSM conflation (used once the OSM extract is available)
+  osm_match_buffer_m: 50
+  osm_match_min_overlap: 0.6
+  # HVDC links absent from CODERS; endpoints & ratings from public project
+  # descriptions (AltaLink WATL, ATCO EATL) -> flagged synthetic:config_hvdc
+  hvdc:
+    - {name: WATL, from_node: AB_330P_DSS, to_node: AB_102S_DSS, p_max_mw: 1000}
+    - {name: EATL, from_node: AB_2029S_TSS, to_node: AB_2075S_DSS, p_max_mw: 1000}
+  # interties as boundary buses; limits are illustrative, configurable
+  boundary:
+    BC:  {nodes: [AB_ABBC01_IPT, AB_ABBC02_IPT, AB_ABBC03_IPT, AB_ABBC04_IPT], import_max_mw: 800, export_max_mw: 800}
+    SK:  {nodes: [AB_ABSK01_IPT], import_max_mw: 150, export_max_mw: 150}
+    MATL: {nodes: [AB_ABUS01_INT], import_max_mw: 300, export_max_mw: 300}
 
 opf:
   vmin_pu: 0.95

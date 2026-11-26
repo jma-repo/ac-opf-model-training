@@ -14,6 +14,8 @@ def main(argv=None):
     c = sub.add_parser("collect")
     c.add_argument("--only", default="goa,osm,aeso,gen_capacity,aeso_files,coders")
     sub.add_parser("report-phase1")
+    sub.add_parser("build-topology")
+    sub.add_parser("report-phase2")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     cfg = load_config(args.config)
@@ -42,6 +44,12 @@ def main(argv=None):
         if "aeso_files" in only:
             from .collect import aeso_files
             aeso_files.fetch(cfg, raw)
+    elif args.cmd == "build-topology":
+        from .conflate import build
+        build.build(cfg)
+    elif args.cmd == "report-phase2":
+        from .report import phase2
+        phase2.run(cfg)
     elif args.cmd == "report-phase1":
         from .report import phase1
         phase1.run(cfg)

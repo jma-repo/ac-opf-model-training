@@ -1,0 +1,31 @@
+element,attribute,n,open_%,derived_%,synthetic_%,sources
+bus,name,982,99.4,0.6,0.0,open:coders=976; derived:node_code=6
+bus,node_code,982,100.0,0.0,0.0,open:coders=982
+bus,lat,982,99.4,0.6,0.0,open:coders=976; derived:neighbour_node_location=6
+bus,lon,982,99.4,0.6,0.0,open:coders=976; derived:neighbour_node_location=6
+bus,base_kv,982,0.0,100.0,0.0,derived:kv_class_of_open_line_voltage=982
+bus,node_type,982,99.4,0.6,0.0,open:coders=976; derived:intertie_table=6
+bus,planning_area,982,0.0,100.0,0.0,derived:within_aeso_planning_area=982
+bus,is_boundary,982,100.0,0.0,0.0,open:coders_interties=982
+branch,from_bus,1171,0.0,100.0,0.0,derived:coders_node_and_kv_class=1171
+branch,to_bus,1171,0.0,100.0,0.0,derived:coders_node_and_kv_class=1171
+branch,circuit_id,1171,100.0,0.0,0.0,open:coders=1171
+branch,voltage_kv,1171,100.0,0.0,0.0,open:coders=1171
+branch,length_km,1171,100.0,0.0,0.0,open:coders=1171
+branch,n_circuits,1171,100.0,0.0,0.0,open:coders=1171
+branch,x_ohm,1171,100.0,0.0,0.0,open:coders=1171
+branch,rate_summer_mw,1171,100.0,0.0,0.0,open:coders=1171
+branch,rate_winter_mw,1171,100.0,0.0,0.0,open:coders=1171
+branch,geometry,1171,0.0,57.8,42.2,synthetic:straight_line=494; derived:goa_path_match=346; derived:goa_path_match_crowfly=331
+transformer,hv_bus,118,0.0,100.0,0.0,derived:multi_voltage_node_adjacent_classes=118
+transformer,lv_bus,118,0.0,100.0,0.0,derived:multi_voltage_node_adjacent_classes=118
+transformer,hv_kv,118,0.0,100.0,0.0,derived:multi_voltage_node_adjacent_classes=118
+transformer,lv_kv,118,0.0,100.0,0.0,derived:multi_voltage_node_adjacent_classes=118
+dc_line,from_bus,2,0.0,0.0,100.0,synthetic:config_hvdc_public_project_description=2
+dc_line,to_bus,2,0.0,0.0,100.0,synthetic:config_hvdc_public_project_description=2
+dc_line,p_max_mw,2,0.0,0.0,100.0,synthetic:config_hvdc_public_project_description=2
+dc_line,name,2,0.0,0.0,100.0,synthetic:config_hvdc_public_project_description=2
+boundary,bus,6,100.0,0.0,0.0,open:coders_interties=6
+boundary,import_max_mw,6,0.0,0.0,100.0,synthetic:config_intertie_limit_split_evenly=6
+boundary,export_max_mw,6,0.0,0.0,100.0,synthetic:config_intertie_limit_split_evenly=6
+boundary,neighbour,6,100.0,0.0,0.0,open:coders_interties=6
