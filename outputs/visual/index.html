@@ -39,10 +39,16 @@ header{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 24px;justify-co
 .steps button b{font-family:var(--f-mono);font-weight:500;margin-right:6px;opacity:.8}
 .steps button[aria-pressed="true"]{background:var(--dc);color:#111;border-color:var(--dc)}
 .steps button:focus-visible{outline:2px solid var(--cool);outline-offset:2px}
-.main{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:14px}
-@media (max-width:960px){.main{grid-template-columns:minmax(0,1fr)}}
-.stage{position:relative;background:var(--canvas);border:1px solid var(--line);border-radius:6px;overflow:hidden;min-width:0;aspect-ratio:0.82;max-height:86vh}
-.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px}
+.stage{position:relative;background:var(--canvas);border:1px solid var(--line);border-radius:6px;overflow:hidden;min-width:0;
+  height:calc(100vh - 150px);min-height:620px}
+@media (max-width:960px){.main{grid-template-columns:minmax(0,1fr)} .stage{height:auto;min-height:0;aspect-ratio:0.8}}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+.stage canvas.drag{cursor:grabbing}
+.zoom{position:absolute;right:12px;top:10px;display:flex;flex-direction:column;gap:4px}
+.zoom button{width:32px;height:32px;font-family:var(--f-mono);font-size:16px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:4px;cursor:pointer}
+.zoom button:focus-visible{outline:2px solid var(--cool)}
+.zoom .z{font-family:var(--f-mono);font-size:10px;color:var(--muted);text-align:center}
 .overlay{position:absolute;left:12px;top:10px;font-family:var(--f-mono);font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:2px;pointer-events:none}
 .overlay b{color:var(--ink);font-weight:500}
 .tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:6px 8px;font-size:12px;
@@ -115,6 +121,12 @@ footer{font-size:11.5px;color:var(--muted);border-top:1px solid var(--line);padd
       <div class="loading" id="loading">loading solved cases…</div>
       <div class="overlay" id="ov"></div>
       <div class="tip" id="tip" hidden></div>
+      <div class="zoom" aria-label="Zoom">
+        <button id="z-in" title="Zoom in">+</button>
+        <button id="z-out" title="Zoom out">−</button>
+        <button id="z-fit" title="Fit Alberta">⤢</button>
+        <span class="z" id="z-lvl">1.0×</span>
+      </div>
       <div class="legend" id="legend"></div>
     </div>
 
@@ -193,6 +205,15 @@ const money = n => n == null ? '—' : '$' + (Math.abs(n) >= 1e6 ? (n/1e6).toFix
 let D = null, M = null, step = 'base', mode = 'build', vmode = 'pred';
 const cv = $('cv'), ctx = cv.getContext('2d');
 let W = 0, H = 0, DPR = 1, proj = null, particles = [], t0 = performance.now(), modelStart = 0;
+const view = {s: 1, x: 0, y: 0};               // zoom / pan applied on top of the fitted projection
+const toScreen = p => [p[0]*view.s + view.x, p[1]*view.s + view.y];
+const toWorld = (x, y) => [(x - view.x)/view.s, (y - view.y)/view.s];
+function zoomAt(f, mx, my){
+  const s2 = Math.max(1, Math.min(14, view.s * f)); if (s2 === view.s) return;
+  view.x = mx - (mx - view.x) * (s2 / view.s); view.y = my - (my - view.y) * (s2 / view.s); view.s = s2;
+  if (view.s === 1){ view.x = 0; view.y = 0; }
+  document.getElementById('z-lvl').textContent = view.s.toFixed(1) + '×';
+}
 
 // ---------- LMP colour ramp (CAD/MWh) ----------
 const LMP_STOPS = [[-60,'#18c0d8'],[0,'#2a6fd6'],[30,'#7f9cc4'],[50,'#b9b2a6'],[70,'#e0a06a'],[100,'#e2672f'],[150,'#d0302a'],[400,'#8f0d2c']];
@@ -225,7 +246,7 @@ function setup(){
   const k = Math.cos(54*Math.PI/180);
   let xs=[],ys=[]; D.geo.bus.forEach(([x,y])=>{xs.push(x*k);ys.push(y)});
   const minx=Math.min(...xs),maxx=Math.max(...xs),miny=Math.min(...ys),maxy=Math.max(...ys);
-  const pad = 26, bottomPad = 96;
+  const pad = 20, bottomPad = W < 600 ? 100 : 70;
   const s = Math.min((W-2*pad)/(maxx-minx),(H-pad-bottomPad)/(maxy-miny));
   const ox = (W - s*(maxx-minx))/2, oy = pad;
   proj = ([x,y]) => [ox + (x*k - minx)*s, oy + (maxy - y)*s];
@@ -252,31 +273,36 @@ function along(ln,u){
 const KV = () => ({69: css('--kv69'), 138: css('--kv138'), 240: css('--kv240'), 500: css('--kv500')});
 function draw(now){
   if (!D || !proj) return;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
   ctx.clearRect(0,0,W,H);
   const kv = KV(), {c, dc, opened} = curCase();
   const dark = css('--canvas').toLowerCase() !== '#ffffff';
   const op = new Set(opened || []);
   const tsec = (now - t0)/1000;
+  // world transform: geometry is drawn in fitted coordinates, zoomed/panned by `view`;
+  // stroke widths and dot sizes grow only slowly with zoom (k)
+  ctx.setTransform(DPR*view.s,0,0,DPR*view.s,DPR*view.x,DPR*view.y);
+  const k = 1/Math.pow(view.s, 0.65);
   // lines
   ctx.lineCap='round'; ctx.lineJoin='round';
   D._lines.forEach((ln,i)=>{
-    const k = D.geo.line_kv[i], ld = c && c.loading ? c.loading[i] : 0;
+    const kvc = D.geo.line_kv[i], ld = c && c.loading ? c.loading[i] : 0;
     ctx.beginPath(); ln.pts.forEach((p,j)=> j?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));
-    if (op.has(i)) { ctx.setLineDash([4,4]); ctx.strokeStyle = css('--muted'); ctx.lineWidth=1.4; ctx.globalAlpha=.9; ctx.stroke(); ctx.setLineDash([]); return; }
-    const w = k>=500?2.4:k>=240?1.6:k>=138?1.0:0.7;
+    if (op.has(i)) { ctx.setLineDash([4/view.s,4/view.s]); ctx.strokeStyle = css('--muted'); ctx.lineWidth=1.4*k; ctx.globalAlpha=.9; ctx.stroke(); ctx.setLineDash([]); return; }
+    const w = (kvc>=500?2.4:kvc>=240?1.6:kvc>=138?1.0:0.7) * k;
     if (step !== 'model' && ld >= 99){
       const pulse = reduce ? 1 : (0.55 + 0.45*Math.sin(tsec*5 + i));
-      ctx.strokeStyle = css('--hot'); ctx.globalAlpha = 0.35 + 0.55*pulse; ctx.lineWidth = w + 2.2;
+      ctx.strokeStyle = css('--hot'); ctx.globalAlpha = 0.35 + 0.55*pulse; ctx.lineWidth = w + 2.2*k;
       if (dark){ ctx.shadowColor = css('--hot'); ctx.shadowBlur = 8; }
       ctx.stroke(); ctx.shadowBlur = 0;
     } else {
-      ctx.strokeStyle = kv[k] || kv[138]; ctx.globalAlpha = step==='model' ? 0.35 : (dark ? 0.55 : 0.65); ctx.lineWidth = w; ctx.stroke();
+      ctx.strokeStyle = kv[kvc] || kv[138]; ctx.globalAlpha = step==='model' ? 0.35 : (dark ? 0.55 : 0.65); ctx.lineWidth = w; ctx.stroke();
     }
   });
   ctx.globalAlpha = 1;
   // opened-line crosses
-  op.forEach(i=>{ const ln=D._lines[i]; const [x,y]=along(ln,.5); ctx.strokeStyle=css('--ink'); ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(x-6,y-6); ctx.lineTo(x+6,y+6); ctx.moveTo(x+6,y-6); ctx.lineTo(x-6,y+6); ctx.stroke(); });
+  op.forEach(i=>{ const ln=D._lines[i]; const [x,y]=along(ln,.5); const q=6/view.s; ctx.strokeStyle=css('--ink'); ctx.lineWidth=2/view.s;
+    ctx.beginPath(); ctx.moveTo(x-q,y-q); ctx.lineTo(x+q,y+q); ctx.moveTo(x+q,y-q); ctx.lineTo(x-q,y+q); ctx.stroke(); });
   // particles (power flow direction)
   if (step !== 'model' && c && c.loading){
     ctx.fillStyle = dark ? 'rgba(255,255,255,.85)' : 'rgba(17,26,36,.7)';
@@ -284,7 +310,7 @@ function draw(now){
     particles.forEach(p=>{
       if (op.has(p.i)) return;
       const ln = D._lines[p.i]; p.u = (p.u + p.dir*p.sp*dt*(60/ Math.max(ln.len,30)) + 1) % 1;
-      const [x,y] = along(ln, p.u); ctx.beginPath(); ctx.arc(x,y,1.1,0,6.283); ctx.fill();
+      const [x,y] = along(ln, p.u); ctx.beginPath(); ctx.arc(x,y,1.1*k,0,6.283); ctx.fill();
     });
   }
   // buses
@@ -295,23 +321,24 @@ function draw(now){
       const vp = 1 + (pred.V_pred[b]-1)*easeOut(mprog);
       col = vmode==='pred' ? vColor(vp) : vmode==='true' ? vColor(pred.V_true[b]) : errColor(Math.abs(pred.V_pred[b]-pred.V_true[b]));
     } else col = c && c.lmp ? lmpColor(c.lmp[b]) : css('--muted');
-    const r = D.geo.bus_kv[b] >= 240 ? 2.6 : 1.9;
+    const r = (D.geo.bus_kv[b] >= 240 ? 2.6 : 1.9) * Math.max(k, 0.55);
     ctx.beginPath(); ctx.arc(x,y,r,0,6.283); ctx.fillStyle = col; ctx.fill();
   });
   // message-passing pulses in model view
   if (step === 'model' && !reduce){
     const blk = Math.min(8, Math.floor(mprog*8)), frac = (mprog*8)%1;
     if (mprog < 1){
-      ctx.strokeStyle = css('--cool'); ctx.lineWidth = 1.6; ctx.globalAlpha = 0.85*(1-frac);
+      ctx.strokeStyle = css('--cool'); ctx.lineWidth = 1.6*k; ctx.globalAlpha = 0.85*(1-frac);
       D._lines.forEach((ln,i)=>{ if (i % 2 !== blk % 2) return; const a=Math.max(0,frac-.15), b=Math.min(1,frac+.05);
         ctx.beginPath(); const p0=along(ln,a); ctx.moveTo(p0[0],p0[1]); for(let u=a;u<=b;u+=0.05){const p=along(ln,u);ctx.lineTo(p[0],p[1]);} ctx.stroke(); });
       ctx.globalAlpha = 1;
     }
     updateBlocks(blk, mprog);
   }
-  // data centres
+  // data centres and labels: screen space, so they stay readable at any zoom
+  ctx.setTransform(DPR,0,0,DPR,0,0);
   Object.entries(dc||{}).forEach(([h,mw])=>{
-    const hb = D.hubs[h]; if (!hb) return; const [x,y] = D._bus[hb.bus];
+    const hb = D.hubs[h]; if (!hb) return; const [x,y] = toScreen(D._bus[hb.bus]);
     const r = 6 + Math.sqrt(mw)*0.9, glow = reduce ? 1 : (0.75 + 0.25*Math.sin(tsec*2.2));
     ctx.beginPath(); ctx.arc(x,y,r*1.9*glow,0,6.283); ctx.fillStyle = css('--dc-glow'); ctx.fill();
     ctx.beginPath(); ctx.arc(x,y,r,0,6.283); ctx.fillStyle = css('--dc'); ctx.globalAlpha=.9; ctx.fill(); ctx.globalAlpha=1;
@@ -421,13 +448,27 @@ $('m-single').addEventListener('click',()=>{mode='single';$('m-single').setAttri
 $('v-replay').addEventListener('click',()=>{modelStart=performance.now();});
 cv.addEventListener('mousemove', e=>{
   if (!D || !proj) return; const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
-  let best=-1, bd=144; D._bus.forEach(([bx,by],i)=>{const d=(bx-x)**2+(by-y)**2; if(d<bd){bd=d;best=i;}});
+  if (drag){ view.x = drag.vx + (x - drag.x); view.y = drag.vy + (y - drag.y); $('tip').hidden = true; return; }
+  let best=-1, bd=144; D._bus.forEach((p,i)=>{const [bx,by]=toScreen(p); const d=(bx-x)**2+(by-y)**2; if(d<bd){bd=d;best=i;}});
   const tip = $('tip'); if (best<0){ tip.hidden=true; return; }
   const {c} = curCase(); const nm = D.geo.bus_name ? D.geo.bus_name[best] : 'bus '+best;
   let v = step==='model' && M ? `V pred ${M.V_pred[best].toFixed(3)} · solver ${M.V_true[best].toFixed(3)}` : (c && c.lmp ? `LMP ${c.lmp[best].toFixed(1)} CAD/MWh` : '');
   tip.innerHTML = `${nm} · ${D.geo.bus_kv[best]} kV<br>${v}`; tip.style.left = x+'px'; tip.style.top = y+'px'; tip.hidden=false;
 });
-cv.addEventListener('mouseleave', ()=>{$('tip').hidden=true;});
+cv.addEventListener('mouseleave', ()=>{$('tip').hidden=true; drag=null; cv.classList.remove('drag');});
+// zoom & pan: wheel zooms at the cursor, drag pans, buttons zoom about the centre, ⤢ resets
+let drag = null;
+cv.addEventListener('wheel', e=>{ e.preventDefault(); const r=cv.getBoundingClientRect();
+  zoomAt(Math.exp(-e.deltaY*0.0015), e.clientX-r.left, e.clientY-r.top); }, {passive:false});
+cv.addEventListener('pointerdown', e=>{ if (view.s<=1) return; const r=cv.getBoundingClientRect();
+  drag={x:e.clientX-r.left,y:e.clientY-r.top,vx:view.x,vy:view.y}; cv.classList.add('drag'); cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointermove', e=>{ if (!drag) return; const r=cv.getBoundingClientRect();
+  view.x = drag.vx + (e.clientX-r.left-drag.x); view.y = drag.vy + (e.clientY-r.top-drag.y); });
+['pointerup','pointercancel'].forEach(ev=>cv.addEventListener(ev, ()=>{ drag=null; cv.classList.remove('drag'); }));
+cv.addEventListener('dblclick', e=>{ const r=cv.getBoundingClientRect(); zoomAt(2, e.clientX-r.left, e.clientY-r.top); });
+$('z-in').addEventListener('click', ()=>zoomAt(1.6, W/2, H/2));
+$('z-out').addEventListener('click', ()=>zoomAt(1/1.6, W/2, H/2));
+$('z-fit').addEventListener('click', ()=>{ view.s=1; view.x=0; view.y=0; $('z-lvl').textContent='1.0×'; });
 window.addEventListener('resize', ()=>{ setup(); });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{legend();panel();});
 new MutationObserver(()=>{legend();panel();}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
