@@ -1,0 +1,304 @@
+<title>Alberta Grid FM Notebook</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&display=swap">
+<style>
+/* Layout: notebook — sticky cell index on the left, cells (markdown / code / output) stacked on the right */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --code:#f0f3f7; --fg:#18212c; --muted:#5a6574; --line:#d9dee6;
+  --accent:#1f5fa8; --accent-soft:#e3edf9;
+  --ok:#1d7a46; --ok-soft:#e2f3e8; --warn:#9a5b00; --warn-soft:#fbefd9; --bad:#b4232a; --bad-soft:#fbe5e5;
+  --f-display:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f141b; --surface:#161d26; --code:#1c2530; --fg:#e4e9f0; --muted:#97a3b3; --line:#2a3441;
+  --accent:#7fb2ee; --accent-soft:#1c2d44;
+  --ok:#6fd39a; --ok-soft:#163324; --warn:#f0b75a; --warn-soft:#3a2b12; --bad:#f08a8f; --bad-soft:#3d1a1d; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f141b; --surface:#161d26; --code:#1c2530; --fg:#e4e9f0; --muted:#97a3b3; --line:#2a3441;
+  --accent:#7fb2ee; --accent-soft:#1c2d44;
+  --ok:#6fd39a; --ok-soft:#163324; --warn:#f0b75a; --warn-soft:#3a2b12; --bad:#f08a8f; --bad-soft:#3d1a1d; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 64px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:220px minmax(0,1fr);gap:28px}
+@media (max-width:880px){.wrap{grid-template-columns:minmax(0,1fr)} nav.toc{position:static!important}}
+header.nb{grid-column:1/-1;display:flex;flex-direction:column;gap:10px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.crumb{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+h1{font-family:var(--f-display);font-size:30px;line-height:1.15;margin:0;text-wrap:balance;letter-spacing:.2px}
+.meta{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--muted)}
+.meta b{color:var(--fg);font-weight:500;font-family:var(--f-mono);font-size:12.5px}
+.disclaimer{background:var(--warn-soft);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:10px 14px;font-size:13.5px}
+.disclaimer strong{color:var(--warn)}
+nav.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px);align-self:start;display:flex;flex-direction:column;gap:2px;font-size:13.5px}
+nav.toc .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:4px 0 6px}
+nav.toc a{display:flex;gap:8px;align-items:baseline;color:var(--fg);text-decoration:none;padding:5px 8px;border-radius:5px}
+nav.toc a:hover,nav.toc a:focus-visible{background:var(--accent-soft);outline:none}
+nav.toc a span.n{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);min-width:46px}
+nav.toc a .dot{margin-left:auto;width:7px;height:7px;border-radius:50%;flex:none;align-self:center}
+.dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)}
+main{display:flex;flex-direction:column;gap:22px;min-width:0}
+section.cell{background:var(--surface);border:1px solid var(--line);border-radius:8px;min-width:0;scroll-margin-top:16px}
+.cell-h{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line)}
+.cmd{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.cell-h h2{font-family:var(--f-display);font-size:19px;margin:0;line-height:1.2}
+.pill{font-family:var(--f-mono);font-size:11px;padding:2px 8px;border-radius:999px;margin-left:auto;white-space:nowrap}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)}
+.md{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.md p{margin:0;max-width:72ch}
+.md ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;max-width:80ch}
+.md h3{font-size:14px;margin:6px 0 0;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+code{font-family:var(--f-mono);font-size:12.8px;background:var(--code);padding:1px 5px;border-radius:4px}
+pre{margin:0;font-family:var(--f-mono);font-size:12.6px;line-height:1.6;background:var(--code);padding:12px 16px;overflow-x:auto;white-space:pre}
+.src{border-top:1px solid var(--line)}
+.src .tag,.out .tag{display:block;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:6px 16px 0}
+.src pre{background:var(--code)}
+.out{border-top:1px solid var(--line)}
+.out pre{background:transparent}
+.k{color:var(--accent)} .c{color:var(--muted)}
+.tbl{overflow-x:auto;padding:4px 16px 14px}
+table{border-collapse:collapse;width:100%;font-size:13.2px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+td.num,th.num{text-align:right}
+tr.hl td{background:var(--accent-soft)}
+.src-open{color:var(--ok);font-family:var(--f-mono);font-size:12px}
+.src-der{color:var(--accent);font-family:var(--f-mono);font-size:12px}
+.src-syn{color:var(--warn);font-family:var(--f-mono);font-size:12px}
+.bar{display:flex;height:10px;border-radius:3px;overflow:hidden;min-width:120px;border:1px solid var(--line)}
+.bar i{display:block;height:100%}
+.bar .o{background:var(--ok)} .bar .d{background:var(--accent)} .bar .s{background:var(--warn)}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1px;background:var(--line);border-top:1px solid var(--line)}
+.kv div{background:var(--surface);padding:10px 16px;display:flex;flex-direction:column;gap:2px}
+.kv span{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.kv b{font-family:var(--f-mono);font-weight:500;font-size:15px}
+.notrun{margin:0 16px 14px;border:1px dashed var(--warn);border-radius:6px;padding:10px 14px;background:var(--warn-soft);font-size:13.5px}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-family:var(--f-mono);font-size:12px}
+.flow span{background:var(--code);border:1px solid var(--line);padding:3px 8px;border-radius:4px}
+.flow em{font-style:normal;color:var(--muted)}
+footer{grid-column:1/-1;font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}
+a{color:var(--accent)}
+@media (prefers-reduced-motion:no-preference){nav.toc a{transition:background .15s}}
+</style>
+
+<div class="wrap">
+<header class="nb">
+  <div class="crumb">jma-repo/ac-opf-model-training › outputs/notebook › pipeline_notebook</div>
+  <h1>Alberta Grid FM Notebook</h1>
+  <div class="meta">
+    <span>commit <b>b9abe32</b></span>
+    <span>compute <b>CPU · 4 cores · no GPU</b></span>
+    <span>pipeline env <b>py3.12 · pandapower 3.5.6 · scipy 1.13.1</b></span>
+    <span>FM env <b>torch 2.8.0+cpu · torch_geometric 2.8.1 · gridsfm 1.1.0</b></span>
+    <span>config <b>config/alberta.yaml</b></span>
+  </div>
+  <div class="disclaimer"><strong>Approximate open-data model, not AESO's grid.</strong> Real parameters are not public; many attributes are synthetic defaults and cost curves are illustrative. Not for operational, planning or market use.</div>
+</header>
+
+<nav class="toc" aria-label="Cells">
+  <div class="lbl">Cells</div>
+  <a href="#data"><span class="n">Cmd 1</span>Data sources<i class="dot ok"></i></a>
+  <a href="#topology"><span class="n">Cmd 2</span>Topology<i class="dot ok"></i></a>
+  <a href="#params"><span class="n">Cmd 3</span>Parameters &amp; base OPF<i class="dot ok"></i></a>
+  <a href="#features"><span class="n">Cmd 4</span>Feature engineering<i class="dot ok"></i></a>
+  <a href="#model"><span class="n">Cmd 5</span>Model<i class="dot ok"></i></a>
+  <a href="#zeroshot"><span class="n">Cmd 6</span>Zero-shot inference<i class="dot ok"></i></a>
+  <a href="#finetune"><span class="n">Cmd 7</span>Fine-tuning<i class="dot warn"></i></a>
+  <a href="#verify"><span class="n">Cmd 8</span>Export &amp; verification<i class="dot ok"></i></a>
+  <a href="#next"><span class="n">Cmd 9</span>Next runs<i class="dot warn"></i></a>
+</nav>
+
+<main>
+
+<!-- ============ 1 DATA ============ -->
+<section class="cell" id="data">
+  <div class="cell-h"><span class="cmd">Cmd 1</span><h2>Data sources</h2><span class="pill ok">ran</span></div>
+  <div class="md"><p>Raw files are cached under <code>data/raw/</code> (not committed). <code>data/raw/MANIFEST.jsonl</code> records URL, parameters, time and SHA-256 for each download. API keys never touch disk or logs.</p></div>
+  <div class="src"><span class="tag">source</span><pre>python -m abgrid.cli collect --only goa,aeso,gen_capacity,aeso_files,coders
+python -m abgrid.cli report-phase1</pre></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Source</th><th>Used for</th><th class="num">Records</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Gov. of Alberta Powerlines (MapServer/15)</td><td>line route geometry</td><td class="num">2,382 lines · 19,035 km</td><td class="src-open">ok</td></tr>
+      <tr><td>CODERS (SESIT)</td><td>circuits, nodes, X, TTC ratings, generators</td><td class="num">1,172 lines · 731 subs · 263 units</td><td class="src-open">ok</td></tr>
+      <tr><td>arXiv 2504.07870 dataset</td><td>voltage / ID cross-check, fuel types</td><td class="num">683 subs · 744 line voltages</td><td class="src-open">ok (no licence file)</td></tr>
+      <tr><td>AESO Alberta Internal Load</td><td>load shapes</td><td class="num">26,304 h (2023–2025)</td><td class="src-open">ok</td></tr>
+      <tr><td>AESO planning-area hourly load</td><td>spatial load allocation</td><td class="num">42 areas · 2023–2025</td><td class="src-open">ok</td></tr>
+      <tr><td>AESO metered volume</td><td>unit output at snapshot</td><td class="num">~1,800 assets · 2×16 days</td><td class="src-open">ok</td></tr>
+      <tr><td>AESO AIES Gen Capacity</td><td>fleet capacity check by fuel</td><td class="num">161,455 rows</td><td class="src-open">ok</td></tr>
+      <tr><td>OpenStreetMap</td><td>voltage cross-check</td><td class="num">—</td><td class="src-syn">pending (egress blocked; extract not uploaded)</td></tr>
+    </tbody></table></div>
+</section>
+
+<!-- ============ 2 TOPOLOGY ============ -->
+<section class="cell" id="topology">
+  <div class="cell-h"><span class="cmd">Cmd 2</span><h2>Topology</h2><span class="pill ok">ran · 7 s</span></div>
+  <div class="md"><p>Backbone is the CODERS node-to-node circuit table. One bus per substation per voltage class (69/72→69, 138/144→138, 240, 500). Government of Alberta geometry is matched by shortest path on a stitched powerline graph.</p></div>
+  <div class="src"><span class="tag">source</span><pre>python -m abgrid.cli build-topology   <span class="c"># src/abgrid/conflate/build.py, goa_match.py</span></pre></div>
+  <div class="kv">
+    <div><span>Buses</span><b>982</b></div><div><span>AC branches</span><b>1,171</b></div>
+    <div><span>Transformers</span><b>118</b></div><div><span>HVDC (WATL, EATL)</span><b>2</b></div>
+    <div><span>Boundary buses</span><b>6</b></div><div><span>Connected components</span><b>1</b></div>
+    <div><span>GoA-matched routes</span><b>677 / 1,171</b></div><div><span>Voltage agreement vs arXiv</span><b>100% / 99.6%</b></div>
+  </div>
+</section>
+
+<!-- ============ 3 PARAMS ============ -->
+<section class="cell" id="params">
+  <div class="cell-h"><span class="cmd">Cmd 3</span><h2>Parameters and base-case OPF</h2><span class="pill ok">ran · AC 6.5 s</span></div>
+  <div class="md"><p>Snapshot <code>2024-01-25 18:00 MPT</code>, winter ratings. Load is AESO planning-area <code>ActLoad</code> (10,978 MW), allocated to 615 buses by connected line capacity. 245 active units; wind and solar availability come from AESO metered output (192 units matched).</p></div>
+  <div class="src"><span class="tag">source</span><pre>python -m abgrid.cli build-params   <span class="c"># src/abgrid/params/build.py</span>
+python -m abgrid.cli solve-base     <span class="c"># DC-OPF → warm-start AC-OPF, relaxation hierarchy</span></pre></div>
+  <div class="tbl"><table>
+    <thead><tr><th></th><th class="num">DC-OPF</th><th class="num">AC-OPF</th></tr></thead>
+    <tbody>
+      <tr><td>Converged</td><td class="num">yes</td><td class="num">yes · relaxation level 0</td></tr>
+      <tr><td>Solve time</td><td class="num">0.85 s</td><td class="num">6.5 s</td></tr>
+      <tr><td>AC losses</td><td class="num">—</td><td class="num">327.8 MW (2.99%)</td></tr>
+      <tr><td>Voltage range</td><td class="num">—</td><td class="num">0.95–1.05 pu</td></tr>
+      <tr><td>Max line loading (MVA)</td><td class="num">100%</td><td class="num">100%</td></tr>
+      <tr><td>LMP min / median / max (illustrative CAD/MWh)</td><td class="num">−46 / 50 / 134</td><td class="num">−50 / 56 / 138</td></tr>
+      <tr><td>Objective (illustrative CAD/h)</td><td class="num">268,580</td><td class="num">280,753</td></tr>
+    </tbody></table></div>
+</section>
+
+<!-- ============ 4 FEATURES ============ -->
+<section class="cell" id="features">
+  <div class="cell-h"><span class="cmd">Cmd 4</span><h2>Feature engineering</h2><span class="pill ok">ran</span></div>
+  <div class="md">
+    <p>Two stages. First, our exporter turns the solved pandapower case into per-unit OPFData tensors (base 100 MVA). Then GridSFM's own <code>prepare_for_inference</code> adds graph features before the forward pass. Nothing is learned in either stage.</p>
+    <h3>Stage A · our export (src/abgrid/export/case.py)</h3>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Tensor</th><th>Columns</th><th>Where the values come from</th></tr></thead>
+    <tbody>
+      <tr><td><code>bus</code> [982×4]</td><td>base_kV, type, Vmin, Vmax</td><td><span class="src-der">derived</span> kV class from CODERS line voltage · type 3 = slack (largest unit), 2 = gen bus · <span class="src-syn">synthetic</span> limits 0.95–1.05</td></tr>
+      <tr><td><code>generator</code> [253×11]</td><td>mbase, pg, Pmin, Pmax, qg, Qmin, Qmax, Vg, cp2, cp1, cp0</td><td><span class="src-open">open</span> Pmax (CODERS) × <span class="src-der">derived</span> availability (AESO metered) · <span class="src-syn">synthetic</span> Q limits, Pmin=0, costs by fuel · cp1 = c1·100, cp2 = c2·100²</td></tr>
+      <tr><td><code>load</code> [617×2]</td><td>Pd, Qd</td><td><span class="src-der">derived</span> planning-area ActLoad allocation · <span class="src-syn">synthetic</span> pf 0.95 · includes 2 HVDC sending-end loads</td></tr>
+      <tr><td><code>ac_line</code> [1171×9]</td><td>angmin, angmax, b_fr, b_to, r, x, rate_a, rate_b, rate_c</td><td><span class="src-open">open</span> x (CODERS Ω) and winter TTC · <span class="src-syn">synthetic</span> r from textbook X/R, B from µS/km × length · angle ±30°</td></tr>
+      <tr><td><code>transformer</code> [118×11]</td><td>angmin, angmax, r, x, rate_a, rate_b, rate_c, tap, shift, b_fr, b_to</td><td><span class="src-syn">synthetic</span> vk/vkr/rating by voltage pair (15% upsized to connected lines) · tap 1, shift 0</td></tr>
+      <tr><td><code>solution</code></td><td>bus [va, vm] · gen [pg, qg] · flows [pf, qf, pt, qt]</td><td>pandapower AC-OPF (PIPS), used as ground truth</td></tr>
+    </tbody></table></div>
+  <div class="md"><h3>Stage B · GridSFM preprocessing (gridsfm/data.py · prepare_for_inference)</h3></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Step</th><th>What it adds</th></tr></thead>
+    <tbody>
+      <tr><td><code>prepare_for_grid_transformer_</code></td><td>Branches become nodes (<code>branch_ac</code>, <code>branch_tr</code>) linked to their end buses; a cycle basis of the grid graph adds <code>cycle</code> nodes linked to the branches in each loop.</td></tr>
+      <tr><td>Effective-resistance landmarks</td><td>Laplacian solves from K landmark buses; per bus: min, max, std, median, mean (5 features).</td></tr>
+      <tr><td>DC features</td><td>DC power-flow quantities from mid-range dispatch (Pmin+Pmax)/2 against load (3 bus features, 4 per branch).</td></tr>
+      <tr><td>Bus-type one-hot</td><td>4 features. With the above, <code>bus.x</code> widens from 4 to 16 columns; Hodge PE adds 8 more, so the bus input layer sees 24 (checked against the checkpoint weights).</td></tr>
+      <tr><td>DC prior (<code>dc_prior.py</code>)</td><td>DC θ and branch-P prior, cached per topology (keyed on 1/x and slack).</td></tr>
+      <tr><td>Hodge PE (in model)</td><td>Signed Hodge diffusion over bus / branch / cycle forms, K = 8 channels, T = 4 steps, concatenated to each node type's input.</td></tr>
+      <tr><td>Physics stress (<code>stress_features.py</code>)</td><td>Per-graph physics-violation features fed to the feasibility head.</td></tr>
+    </tbody></table></div>
+</section>
+
+<!-- ============ 5 MODEL ============ -->
+<section class="cell" id="model">
+  <div class="cell-h"><span class="cmd">Cmd 5</span><h2>Model</h2><span class="pill ok">loaded</span></div>
+  <div class="md"><p><strong>GridSFM-Open v1.1</strong> (Microsoft Research, MIT licence). A heterogeneous graph transformer for AC-OPF, pretrained on grids of 500 buses or more. Our grid has 982 buses, which is inside that range.</p></div>
+  <div class="src"><span class="tag">source</span><pre><span class="k">from</span> gridsfm <span class="k">import</span> load_model
+model = load_model(<span class="c">"data/models/gridsfm/gridsfm_open_v1.1.pt"</span>, device=<span class="c">"cpu"</span>)</pre></div>
+  <div class="kv">
+    <div><span>Backbone</span><b>GridTransformerBackbone</b></div>
+    <div><span>Hidden dim</span><b>128</b></div>
+    <div><span>Blocks</span><b>8 GridBlocks</b></div>
+    <div><span>Attention heads</span><b>4 · FFN ×4</b></div>
+    <div><span>Parameters</span><b>15,148,227</b></div>
+    <div><span>Output heads</span><b>5 (θ, V, Pg, Qg, feasibility)</b></div>
+    <div><span>Node types</span><b>bus, gen, load, shunt, branch_ac, branch_tr, cycle</b></div>
+    <div><span>Checkpoint SHA-256</span><b>f8a4396122e603e8…</b></div>
+  </div>
+</section>
+
+<!-- ============ 6 ZERO-SHOT ============ -->
+<section class="cell" id="zeroshot">
+  <div class="cell-h"><span class="cmd">Cmd 6</span><h2>Zero-shot inference</h2><span class="pill ok">ran · CPU</span></div>
+  <div class="md"><p>No training. Released weights are applied directly. Two shipped GridSFM samples act as controls that the install and the metric code are correct. Errors are mean absolute error against the solver; angles are compared relative to the reference bus; cost is recomputed from predicted Pg with each case's own cost curves.</p></div>
+  <div class="src"><span class="tag">source</span><pre>HF_HUB_DISABLE_XET=1 python -m abgrid.fm.gridsfm_zeroshot \
+  samples/case500_goc.pyg.json samples/msr_colorado.pyg.json outputs/phase3/alberta_base.pyg.json</pre></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Case</th><th class="num">Buses</th><th class="num">V MAE pu</th><th class="num">θ MAE °</th><th class="num">Pg MAE MW</th><th class="num">Qg MAE MVAr</th><th class="num">Cost err</th><th class="num">P(feasible)</th><th class="num">Inference</th></tr></thead>
+    <tbody>
+      <tr><td>case500_goc (control)</td><td class="num">500</td><td class="num">0.0011</td><td class="num">1.20</td><td class="num">0.64</td><td class="num">4.08</td><td class="num">−0.54%</td><td class="num">0.997</td><td class="num">0.23 s</td></tr>
+      <tr><td>msr_colorado (control)</td><td class="num">651</td><td class="num">0.0013</td><td class="num">0.94</td><td class="num">0.80</td><td class="num">5.54</td><td class="num">+0.74%</td><td class="num">1.000</td><td class="num">0.28 s</td></tr>
+      <tr class="hl"><td><strong>Alberta base case</strong></td><td class="num">982</td><td class="num">0.0376</td><td class="num">6.24</td><td class="num">21.93</td><td class="num">17.15</td><td class="num">+23.46%</td><td class="num">0.345</td><td class="num">0.35 s</td></tr>
+    </tbody></table></div>
+  <div class="out"><span class="tag">notes</span><pre>Solver reference: AC-OPF 6.5 s vs model 0.35 s on CPU (~19x faster), before any accuracy gain.
+Alberta case is out of distribution: 41 buses sit at the 0.95/1.05 limits, ~10 lines at 100%,
+negative LMPs, fixed HVDC injections. The model predicts V in 0.993–1.05 and calls it 35% feasible.</pre></div>
+</section>
+
+<!-- ============ 7 FINE-TUNE ============ -->
+<section class="cell" id="finetune">
+  <div class="cell-h"><span class="cmd">Cmd 7</span><h2>Fine-tuning</h2><span class="pill warn">not run yet</span></div>
+  <div class="notrun"><strong>No fine-tuning has been run.</strong> It needs the Phase 5 scenario set first. The cell below is the planned configuration; this page will be updated with real results.</div>
+  <div class="src"><span class="tag">planned</span><pre><span class="k">from</span> gridsfm <span class="k">import</span> load_model, SyntheticMixedDataset, finetune_opfdata
+model = load_model(<span class="c">"gridsfm_open_v1.1.pt"</span>)            <span class="c"># fresh release weights per round</span>
+train = SyntheticMixedDataset(alberta_scenarios, infeas_prob=<span class="k">0.3</span>, seed=<span class="k">42</span>,
+                              transform=cycle_basis_plus_hodge_pe)
+log = finetune_opfdata(model, DataLoader(train, batch_size=<span class="k">8</span>, shuffle=True),
+                       epochs=<span class="k">10</span>, lr=<span class="k">1e-4</span>)                     <span class="c"># AdamW</span></pre></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Round</th><th class="num">Train scenarios</th><th>Held-out evaluation</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>0-shot</td><td class="num">0</td><td>base case only</td><td class="src-open">done (Cmd 6)</td></tr>
+      <tr><td>FT-10</td><td class="num">10</td><td rowspan="3">same test split: cost error, V/θ/Pg/Qg MAE, feasibility F1, KCL residual, time vs solver, warm-start speed-up</td><td class="src-syn">planned</td></tr>
+      <tr><td>FT-100</td><td class="num">100</td><td class="src-syn">planned</td></tr>
+      <tr><td>FT-1000</td><td class="num">1,000</td><td class="src-syn">planned</td></tr>
+    </tbody></table></div>
+  <div class="md"><p>GridSFM supports fine-tuning only on the OPFData format, which is why the exporter writes the exact OPFData widths (4/11/9/11). The gridfm-graphkit route will be compared in Phase 6.</p></div>
+</section>
+
+<!-- ============ 8 VERIFY ============ -->
+<section class="cell" id="verify">
+  <div class="cell-h"><span class="cmd">Cmd 8</span><h2>Export and verification</h2><span class="pill ok">ran · 15 tests pass</span></div>
+  <div class="src"><span class="tag">source</span><pre>python -m abgrid.cli phase4    <span class="c"># MATPOWER .m · PowerModels JSON · GridSFM .pyg.json from one case</span>
+pytest -q                      <span class="c"># topology + export + relaxation tests</span></pre></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Check</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>Three export formats agree</td><td>exact; GridSFM file identical to Phase 3 converter</td></tr>
+      <tr><td>MATPOWER round trip (parse .m → from_ppc → AC-OPF)</td><td>objective Δ 0.03%, generation 12,506.3 → 12,507.5 MW, 982 / 1,289 / 253 elements</td></tr>
+      <tr><td>Max branch angle difference</td><td>27.1° (none above 30°)</td></tr>
+      <tr><td>DC vs AC LMP correlation</td><td>0.90</td></tr>
+    </tbody></table></div>
+  <div class="md"><h3>Relaxation hierarchy under load scaling</h3></div>
+  <div class="tbl"><table>
+    <thead><tr><th class="num">Load ×</th><th class="num">MW</th><th>Feasible</th><th>Level reached</th><th class="num">Time</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1.0</td><td class="num">10,978</td><td>yes</td><td>0 · nominal</td><td class="num">9.8 s</td></tr>
+      <tr><td class="num">1.1</td><td class="num">12,076</td><td>yes</td><td>0 · nominal</td><td class="num">10.5 s</td></tr>
+      <tr><td class="num">1.2</td><td class="num">13,174</td><td>yes</td><td>1 · line ratings ×1.2</td><td class="num">20.5 s</td></tr>
+      <tr><td class="num">1.3</td><td class="num">14,272</td><td>yes</td><td>1 · line ratings ×1.2</td><td class="num">23.7 s</td></tr>
+      <tr><td class="num">1.4</td><td class="num">15,370</td><td>yes</td><td>4 · load shedding (225 MW)</td><td class="num">51.0 s</td></tr>
+      <tr><td class="num">1.5</td><td class="num">16,468</td><td>no</td><td>— · labelled infeasible</td><td class="num">55.5 s</td></tr>
+    </tbody></table></div>
+</section>
+
+<!-- ============ 9 NEXT ============ -->
+<section class="cell" id="next">
+  <div class="cell-h"><span class="cmd">Cmd 9</span><h2>Next runs</h2><span class="pill warn">queued</span></div>
+  <div class="md">
+    <div class="flow"><span>Phase 5 · ~1,000 scenarios</span><em>→</em><span>Phase 6 · FT 10/100/1000</span><em>→</em><span>Phase 7 · data-centre siting</span></div>
+    <ul>
+      <li>Scenarios: AIL seasonal/hourly shapes, wind/solar availability, N-1 line and unit outages, HVDC and intertie schedules, 100/300/500 MW data-centre loads.</li>
+      <li>Each scenario keeps its relaxation level and feasibility label for the feasibility head.</li>
+      <li>Open question: converter fidelity for quadratic costs is checked only by round trip, since the GridSFM samples use zero quadratic cost.</li>
+    </ul>
+  </div>
+  <div class="md">
+    <h3>Provenance across all tracked attributes</h3>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <div class="bar" style="width:320px;max-width:100%" role="img" aria-label="open 35.5%, derived 30.8%, synthetic 33.7%"><i class="o" style="width:35.5%"></i><i class="d" style="width:30.8%"></i><i class="s" style="width:33.7%"></i></div>
+      <span class="src-open">open 35.5%</span><span class="src-der">derived 30.8%</span><span class="src-syn">synthetic 33.7%</span>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>Sources: Government of Alberta (Open Government Licence – Alberta) · CODERS, SESIT · AESO public data · Cheng &amp; Chen, arXiv:2504.07870 · GridSFM, Microsoft (MIT). Full report files in <code>outputs/phase1</code>–<code>phase4</code>.</footer>
+</div>
