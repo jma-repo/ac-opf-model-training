@@ -19,6 +19,10 @@ def main(argv=None):
     sub.add_parser("build-params")
     sub.add_parser("solve-base")
     sub.add_parser("report-phase3")
+    g5 = sub.add_parser("scenarios")
+    g5.add_argument("--n", type=int, default=None)
+    g5.add_argument("--run", default=None)
+    g5.add_argument("--procs", type=int, default=None)
     p4 = sub.add_parser("phase4")
     p4.add_argument("--skip-stress", action="store_true")
     args = ap.parse_args(argv)
@@ -63,6 +67,11 @@ def main(argv=None):
         out = path(cfg, "output_dir") / "phase3"
         out.mkdir(parents=True, exist_ok=True)
         print(_j.dumps(opf.solve(cfg, net, out), indent=1, default=float))
+    elif args.cmd == "scenarios":
+        from .scenarios import generate
+        df, out = generate.generate(cfg, n=args.n, run_name=args.run, n_proc=args.procs)
+        print(df.groupby("family")[["feasible", "ac_feasible_any", "dc_feasible"]].mean().round(3))
+        print(df[["dc_s", "ac_s_nominal", "ac_s_total", "wall_s"]].describe().round(2))
     elif args.cmd == "phase4":
         from .report import phase4
         phase4.run(cfg, skip_stress=args.skip_stress)

@@ -1,0 +1,444 @@
+<title>Alberta Grid Siting Studio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: control-room console — live grid canvas left, settlement readouts right; step rail on top */
+:root{
+  --bg:#f4f6f9; --panel:#ffffff; --ink:#111a24; --muted:#5d6876; --line:#d8dee7; --grid:#e7ebf1;
+  --kv69:#7aa7a0; --kv138:#6c8fb8; --kv240:#c79a45; --kv500:#c2473a;
+  --dc:#e08a00; --dc-glow:rgba(224,138,0,.28); --hot:#d62b2b; --cool:#1f6fd6; --ok:#1d8a50; --warn:#b26a00;
+  --canvas:#ffffff; --bus-stroke:rgba(17,26,36,.25);
+  --f-display:"Chakra Petch","IBM Plex Sans",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#070b10; --panel:#0d141c; --ink:#e6edf5; --muted:#8a97a8; --line:#1d2834; --grid:#111b25;
+  --kv69:#3f8f86; --kv138:#4f86c9; --kv240:#e0a83e; --kv500:#ff5a47;
+  --dc:#ffb020; --dc-glow:rgba(255,176,32,.35); --hot:#ff4040; --cool:#3aa0ff; --ok:#46d08a; --warn:#f5b546;
+  --canvas:#070b10; --bus-stroke:rgba(255,255,255,.18); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#070b10; --panel:#0d141c; --ink:#e6edf5; --muted:#8a97a8; --line:#1d2834; --grid:#111b25;
+  --kv69:#3f8f86; --kv138:#4f86c9; --kv240:#e0a83e; --kv500:#ff5a47;
+  --dc:#ffb020; --dc-glow:rgba(255,176,32,.35); --hot:#ff4040; --cool:#3aa0ff; --ok:#46d08a; --warn:#f5b546;
+  --canvas:#070b10; --bus-stroke:rgba(255,255,255,.18); color-scheme:dark}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 40px}
+.app{max-width:1440px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 24px;justify-content:space-between}
+.ttl h1{font-family:var(--f-display);font-weight:700;font-size:clamp(24px,3.2vw,36px);line-height:1.05;margin:0;letter-spacing:.3px}
+.ttl h1 em{font-style:normal;color:var(--dc)}
+.ttl p{margin:4px 0 0;color:var(--muted);font-size:13px;max-width:70ch}
+.steps{display:flex;flex-wrap:wrap;gap:6px}
+.steps button{font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase;
+  background:transparent;color:var(--muted);border:1px solid var(--line);padding:8px 12px;border-radius:4px;cursor:pointer}
+.steps button b{font-family:var(--f-mono);font-weight:500;margin-right:6px;opacity:.8}
+.steps button[aria-pressed="true"]{background:var(--dc);color:#111;border-color:var(--dc)}
+.steps button:focus-visible{outline:2px solid var(--cool);outline-offset:2px}
+.main{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:14px}
+@media (max-width:960px){.main{grid-template-columns:minmax(0,1fr)}}
+.stage{position:relative;background:var(--canvas);border:1px solid var(--line);border-radius:6px;overflow:hidden;min-width:0;aspect-ratio:0.82;max-height:86vh}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.overlay{position:absolute;left:12px;top:10px;font-family:var(--f-mono);font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:2px;pointer-events:none}
+.overlay b{color:var(--ink);font-weight:500}
+.tip{position:absolute;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:6px 8px;font-size:12px;
+  font-family:var(--f-mono);white-space:nowrap;transform:translate(10px,-50%);box-shadow:0 4px 16px rgba(0,0,0,.25)}
+.legend{position:absolute;left:12px;right:12px;bottom:10px;display:flex;flex-wrap:wrap;gap:10px 22px;align-items:flex-end;pointer-events:none}
+.lg{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--muted)}
+.lg .lbl{font-family:var(--f-display);font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:10.5px;color:var(--ink)}
+.ramp{display:flex;height:10px;width:210px;max-width:44vw;border-radius:2px;overflow:hidden}
+.ramp i{flex:1}
+.ticks{display:flex;justify-content:space-between;width:210px;max-width:44vw;font-family:var(--f-mono);font-size:10px}
+.keys{display:flex;flex-direction:column;gap:3px}
+.keys span{display:flex;align-items:center;gap:6px}
+.sw{display:inline-block;width:16px;height:3px;border-radius:2px}
+.panel{display:flex;flex-direction:column;gap:12px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card h3{margin:0;font-family:var(--f-display);font-weight:600;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.big{font-family:var(--f-display);font-weight:700;font-size:28px;line-height:1.1;font-variant-numeric:tabular-nums}
+.sub{color:var(--muted);font-size:12.5px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line)}
+.pill.ok{color:var(--ok);border-color:currentColor} .pill.warn{color:var(--warn);border-color:currentColor} .pill.bad{color:var(--hot);border-color:currentColor}
+.stack{display:flex;height:16px;border-radius:3px;overflow:hidden;background:var(--grid)}
+.stack i{display:block;height:100%;transition:width .5s ease}
+.rows{display:flex;flex-direction:column;gap:4px;font-size:12.5px}
+.rows div{display:grid;grid-template-columns:12px 1fr auto auto;gap:8px;align-items:center;font-variant-numeric:tabular-nums}
+.rows .d{width:10px;height:10px;border-radius:2px}
+.rows .v{font-family:var(--f-mono);font-size:12px;text-align:right}
+.rows .p{font-family:var(--f-mono);font-size:11px;color:var(--muted);min-width:44px;text-align:right}
+.mult{font-family:var(--f-display);font-weight:600;font-size:18px}
+.mult.up{color:var(--hot)} .mult.dn{color:var(--ok)}
+.hubs{display:flex;flex-direction:column;gap:5px}
+.hub{display:grid;grid-template-columns:110px 1fr 54px;gap:8px;align-items:center;font-size:12.5px}
+.hub .bar{height:9px;background:var(--grid);border-radius:2px;overflow:hidden}
+.hub .bar i{display:block;height:100%;background:var(--dc)}
+.hub .v{font-family:var(--f-mono);font-size:12px;text-align:right}
+.ctrl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ctrl select,.ctrl button{font-family:var(--f-mono);font-size:12px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:6px 8px}
+.ctrl button[aria-pressed="true"]{border-color:var(--dc);color:var(--dc)}
+.ctrl label{font-size:12px;color:var(--muted)}
+.curt{height:12px;background:var(--grid);border-radius:2px;overflow:hidden}
+.curt i{display:block;height:100%;background:var(--hot);transition:width .5s ease}
+.arch{display:flex;flex-direction:column;gap:6px}
+.archrow{display:flex;gap:4px;flex-wrap:wrap;align-items:center;font-family:var(--f-mono);font-size:11px}
+.blk{flex:1;min-width:26px;text-align:center;padding:6px 0;border:1px solid var(--line);border-radius:3px;color:var(--muted);transition:background .2s,color .2s}
+.blk.on{background:var(--cool);color:#fff;border-color:var(--cool)}
+.blk.done{color:var(--ink);border-color:var(--cool)}
+.io{padding:5px 8px;border:1px dashed var(--line);border-radius:3px;color:var(--muted)}
+.note{font-size:11.5px;color:var(--muted)}
+footer{font-size:11.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:10px}
+.loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--f-mono);color:var(--muted)}
+[hidden]{display:none!important}
+</style>
+
+<div class="app">
+  <header>
+    <div class="ttl">
+      <h1>Alberta Grid <em>Siting Studio</em></h1>
+      <p>Data-centre load on an approximate open-data model of Alberta's transmission grid. Every number comes from an AC-OPF solve; generator costs are illustrative, so CAD figures are indicative only. This is not AESO's grid.</p>
+    </div>
+    <nav class="steps" aria-label="Steps">
+      <button id="s-base" data-step="base" aria-pressed="true"><b>1</b>Today</button>
+      <button id="s-add" data-step="add" aria-pressed="false"><b>2</b>Add data centres</button>
+      <button id="s-switch" data-step="switch" aria-pressed="false"><b>3</b>Switch lines</button>
+      <button id="s-model" data-step="model" aria-pressed="false"><b>4</b>Model view</button>
+    </nav>
+  </header>
+
+  <div class="main">
+    <div class="stage" id="stage">
+      <canvas id="cv" aria-label="Map of the Alberta transmission grid"></canvas>
+      <div class="loading" id="loading">loading solved cases…</div>
+      <div class="overlay" id="ov"></div>
+      <div class="tip" id="tip" hidden></div>
+      <div class="legend" id="legend"></div>
+    </div>
+
+    <aside class="panel" id="panel">
+      <section class="card" id="c-status">
+        <h3>Status</h3>
+        <div class="big" id="status-big">—</div>
+        <div class="sub" id="status-sub"></div>
+        <div id="status-pill"></div>
+      </section>
+
+      <section class="card" id="c-ctrl" hidden>
+        <h3>Scenario</h3>
+        <div class="ctrl">
+          <button id="m-build" aria-pressed="true">All hubs (buildout)</button>
+          <button id="m-single" aria-pressed="false">One site</button>
+        </div>
+        <div class="ctrl" id="single-ctrl" hidden>
+          <label for="hub-sel">Hub</label><select id="hub-sel"></select>
+          <label for="size-sel">Size</label>
+          <select id="size-sel"><option>100</option><option selected>300</option><option>500</option></select>
+          <span class="sub">MW</span>
+        </div>
+      </section>
+
+      <section class="card" id="c-pay">
+        <h3>What customers pay for power · CAD per hour</h3>
+        <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+          <div class="big" id="pay-big">—</div><div class="mult" id="pay-mult"></div>
+        </div>
+        <div class="stack" id="pay-stack"><i id="st-fuel"></i><i id="st-gen"></i><i id="st-cong"></i></div>
+        <div class="rows" id="pay-rows"></div>
+        <div class="note">Load payment Σ LMP×load = fuel cost + generator margin + congestion &amp; loss rent. Illustrative cost curves.</div>
+      </section>
+
+      <section class="card" id="c-hubs">
+        <h3>Data-centre load added by hub · MW</h3>
+        <div class="hubs" id="hubs"></div>
+      </section>
+
+      <section class="card" id="c-curt">
+        <h3>Wind + solar curtailed · MW</h3>
+        <div class="big" id="curt-big" style="color:var(--hot)">—</div>
+        <div class="curt"><i id="curt-bar"></i></div>
+        <div class="sub" id="curt-sub"></div>
+      </section>
+
+      <section class="card" id="c-model" hidden>
+        <h3>GridSFM-Open v1.1 · zero-shot</h3>
+        <div class="arch">
+          <div class="archrow"><span class="io">inputs: bus 24 · gen 11 · load 2 · branch · cycle</span></div>
+          <div class="archrow" id="blocks"></div>
+          <div class="archrow"><span class="io">heads: θ · V · Pg · Qg · feasibility</span></div>
+        </div>
+        <div class="ctrl">
+          <button id="v-pred" aria-pressed="true">Predicted V</button>
+          <button id="v-true" aria-pressed="false">Solver V</button>
+          <button id="v-err" aria-pressed="false">|error|</button>
+          <button id="v-replay">Replay</button>
+        </div>
+        <div class="rows" id="model-rows"></div>
+        <div class="note">Schematic: messages pulse along the grid once per block. The model's intermediate block states aren't exposed, so bus colours ease from a flat 1.0 pu start to the final prediction. Predictions, solver values and errors are real.</div>
+      </section>
+    </aside>
+  </div>
+  <footer>Sources: CODERS (SESIT) circuits and ratings · Government of Alberta powerline geometry (OGL-Alberta) · AESO planning-area load and metered output · GridSFM (Microsoft, MIT). Snapshot 2024-01-25 18:00 MPT, winter ratings, AC-OPF via pandapower/PIPS (cross-checked with PowerModels + Ipopt). Switching set chosen by greedy DC-OPF screening, confirmed with AC-OPF.</footer>
+</div>
+
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fmt = n => n == null ? '—' : Math.round(n).toLocaleString('en-CA');
+const money = n => n == null ? '—' : '$' + (Math.abs(n) >= 1e6 ? (n/1e6).toFixed(2) + 'M' : Math.round(n/1e3).toLocaleString('en-CA') + 'k');
+let D = null, M = null, step = 'base', mode = 'build', vmode = 'pred';
+const cv = $('cv'), ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1, proj = null, particles = [], t0 = performance.now(), modelStart = 0;
+
+// ---------- LMP colour ramp (CAD/MWh) ----------
+const LMP_STOPS = [[-60,'#18c0d8'],[0,'#2a6fd6'],[30,'#7f9cc4'],[50,'#b9b2a6'],[70,'#e0a06a'],[100,'#e2672f'],[150,'#d0302a'],[400,'#8f0d2c']];
+function hex(h){return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]}
+function lmpColor(v){
+  if (v <= LMP_STOPS[0][0]) return LMP_STOPS[0][1];
+  for (let i=1;i<LMP_STOPS.length;i++){const [a,ca]=LMP_STOPS[i-1],[b,cb]=LMP_STOPS[i]; if(v<=b){const t=(v-a)/(b-a),A=hex(ca),B=hex(cb);return `rgb(${A.map((x,k)=>Math.round(x+(B[k]-x)*t)).join(',')})`}}
+  return LMP_STOPS[LMP_STOPS.length-1][1];
+}
+function vColor(v){ // 0.95 .. 1.05 diverging
+  const t = Math.max(0, Math.min(1, (v - 0.95) / 0.10)); const A=hex('#3aa0ff'),B=hex('#e8e4da'),C=hex('#ff4a3a');
+  const [P,Q,s] = t<.5 ? [A,B,t*2] : [B,C,(t-.5)*2]; return `rgb(${P.map((x,k)=>Math.round(x+(Q[k]-x)*s)).join(',')})`;
+}
+function errColor(e){const t=Math.min(1,e/0.08);const A=hex('#2b3a4a'),B=hex('#ffd23a');return `rgb(${A.map((x,k)=>Math.round(x+(B[k]-x)*t)).join(',')})`}
+
+// ---------- current case ----------
+function curCase(){
+  if (step === 'base' || step === 'model') return {c: D.base, label: 'today', dc: {}};
+  if (step === 'switch') return {c: D.switched, label: 'buildout + switching', dc: D.buildout.sizes, opened: D.switched.opened};
+  if (mode === 'single'){ const h=$('hub-sel').value, mw=+$('size-sel').value; return {c: D.single[h+'|'+mw], label: `${h} +${mw} MW`, dc: {[h]: mw}, single:true}; }
+  return {c: D.buildout, label: 'buildout', dc: D.buildout.sizes};
+}
+
+// ---------- projection ----------
+function setup(){
+  const r = cv.getBoundingClientRect(); DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = r.width; H = r.height; cv.width = Math.round(W*DPR); cv.height = Math.round(H*DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  if (!D) return;
+  const k = Math.cos(54*Math.PI/180);
+  let xs=[],ys=[]; D.geo.bus.forEach(([x,y])=>{xs.push(x*k);ys.push(y)});
+  const minx=Math.min(...xs),maxx=Math.max(...xs),miny=Math.min(...ys),maxy=Math.max(...ys);
+  const pad = 26, bottomPad = 96;
+  const s = Math.min((W-2*pad)/(maxx-minx),(H-pad-bottomPad)/(maxy-miny));
+  const ox = (W - s*(maxx-minx))/2, oy = pad;
+  proj = ([x,y]) => [ox + (x*k - minx)*s, oy + (maxy - y)*s];
+  D._lines = D.geo.line.map(pl => { const pts = pl.map(proj); let L=[0]; for(let i=1;i<pts.length;i++) L.push(L[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1])); return {pts, L, len: L[L.length-1]}; });
+  D._bus = D.geo.bus.map(proj);
+  buildParticles();
+}
+function buildParticles(){
+  particles = [];
+  const c = curCase().c; if (!c || !c.loading) return;
+  D._lines.forEach((ln,i)=>{
+    const ld = c.loading[i]||0, dir = c.flow_dir ? c.flow_dir[i] : 1;
+    if (!dir || ld < 3 || ln.len < 2) return;
+    const n = Math.min(6, Math.max(1, Math.round(ln.len/40)));
+    for (let j=0;j<n;j++) particles.push({i, u: j/n + Math.random()*0.1, dir, sp: 0.04 + 0.22*Math.min(1, ld/100)});
+  });
+}
+function along(ln,u){
+  const d = u*ln.len; let k=1; while(k<ln.L.length-1 && ln.L[k]<d) k++;
+  const a=ln.pts[k-1],b=ln.pts[k],seg=(ln.L[k]-ln.L[k-1])||1,t=(d-ln.L[k-1])/seg; return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
+}
+
+// ---------- draw ----------
+const KV = () => ({69: css('--kv69'), 138: css('--kv138'), 240: css('--kv240'), 500: css('--kv500')});
+function draw(now){
+  if (!D || !proj) return;
+  ctx.clearRect(0,0,W,H);
+  const kv = KV(), {c, dc, opened} = curCase();
+  const dark = css('--canvas').toLowerCase() !== '#ffffff';
+  const op = new Set(opened || []);
+  const tsec = (now - t0)/1000;
+  // lines
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  D._lines.forEach((ln,i)=>{
+    const k = D.geo.line_kv[i], ld = c && c.loading ? c.loading[i] : 0;
+    ctx.beginPath(); ln.pts.forEach((p,j)=> j?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));
+    if (op.has(i)) { ctx.setLineDash([4,4]); ctx.strokeStyle = css('--muted'); ctx.lineWidth=1.4; ctx.globalAlpha=.9; ctx.stroke(); ctx.setLineDash([]); return; }
+    const w = k>=500?2.4:k>=240?1.6:k>=138?1.0:0.7;
+    if (step !== 'model' && ld >= 99){
+      const pulse = reduce ? 1 : (0.55 + 0.45*Math.sin(tsec*5 + i));
+      ctx.strokeStyle = css('--hot'); ctx.globalAlpha = 0.35 + 0.55*pulse; ctx.lineWidth = w + 2.2;
+      if (dark){ ctx.shadowColor = css('--hot'); ctx.shadowBlur = 8; }
+      ctx.stroke(); ctx.shadowBlur = 0;
+    } else {
+      ctx.strokeStyle = kv[k] || kv[138]; ctx.globalAlpha = step==='model' ? 0.35 : (dark ? 0.55 : 0.65); ctx.lineWidth = w; ctx.stroke();
+    }
+  });
+  ctx.globalAlpha = 1;
+  // opened-line crosses
+  op.forEach(i=>{ const ln=D._lines[i]; const [x,y]=along(ln,.5); ctx.strokeStyle=css('--ink'); ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(x-6,y-6); ctx.lineTo(x+6,y+6); ctx.moveTo(x+6,y-6); ctx.lineTo(x-6,y+6); ctx.stroke(); });
+  // particles (power flow direction)
+  if (step !== 'model' && c && c.loading){
+    ctx.fillStyle = dark ? 'rgba(255,255,255,.85)' : 'rgba(17,26,36,.7)';
+    const dt = reduce ? 0 : 1/60;
+    particles.forEach(p=>{
+      if (op.has(p.i)) return;
+      const ln = D._lines[p.i]; p.u = (p.u + p.dir*p.sp*dt*(60/ Math.max(ln.len,30)) + 1) % 1;
+      const [x,y] = along(ln, p.u); ctx.beginPath(); ctx.arc(x,y,1.1,0,6.283); ctx.fill();
+    });
+  }
+  // buses
+  const pred = M, mprog = step==='model' ? modelProgress(now) : 1;
+  D._bus.forEach(([x,y],b)=>{
+    let col;
+    if (step === 'model' && pred){
+      const vp = 1 + (pred.V_pred[b]-1)*easeOut(mprog);
+      col = vmode==='pred' ? vColor(vp) : vmode==='true' ? vColor(pred.V_true[b]) : errColor(Math.abs(pred.V_pred[b]-pred.V_true[b]));
+    } else col = c && c.lmp ? lmpColor(c.lmp[b]) : css('--muted');
+    const r = D.geo.bus_kv[b] >= 240 ? 2.6 : 1.9;
+    ctx.beginPath(); ctx.arc(x,y,r,0,6.283); ctx.fillStyle = col; ctx.fill();
+  });
+  // message-passing pulses in model view
+  if (step === 'model' && !reduce){
+    const blk = Math.min(8, Math.floor(mprog*8)), frac = (mprog*8)%1;
+    if (mprog < 1){
+      ctx.strokeStyle = css('--cool'); ctx.lineWidth = 1.6; ctx.globalAlpha = 0.85*(1-frac);
+      D._lines.forEach((ln,i)=>{ if (i % 2 !== blk % 2) return; const a=Math.max(0,frac-.15), b=Math.min(1,frac+.05);
+        ctx.beginPath(); const p0=along(ln,a); ctx.moveTo(p0[0],p0[1]); for(let u=a;u<=b;u+=0.05){const p=along(ln,u);ctx.lineTo(p[0],p[1]);} ctx.stroke(); });
+      ctx.globalAlpha = 1;
+    }
+    updateBlocks(blk, mprog);
+  }
+  // data centres
+  Object.entries(dc||{}).forEach(([h,mw])=>{
+    const hb = D.hubs[h]; if (!hb) return; const [x,y] = D._bus[hb.bus];
+    const r = 6 + Math.sqrt(mw)*0.9, glow = reduce ? 1 : (0.75 + 0.25*Math.sin(tsec*2.2));
+    ctx.beginPath(); ctx.arc(x,y,r*1.9*glow,0,6.283); ctx.fillStyle = css('--dc-glow'); ctx.fill();
+    ctx.beginPath(); ctx.arc(x,y,r,0,6.283); ctx.fillStyle = css('--dc'); ctx.globalAlpha=.9; ctx.fill(); ctx.globalAlpha=1;
+    ctx.fillStyle = css('--ink'); ctx.font = `600 12px ${css('--f-display')}`;
+    const left = x > W*0.55; ctx.textAlign = left ? 'right' : 'left';
+    const lx = left ? x - r - 8 : x + r + 8;
+    ctx.fillText(h, lx, y - 3);
+    ctx.font = `500 11px ${css('--f-mono')}`; ctx.fillStyle = css('--dc'); ctx.fillText(`+${mw} MW`, lx, y + 11);
+    ctx.textAlign='left';
+  });
+  requestAnimationFrame(draw);
+}
+const easeOut = t => 1 - Math.pow(1-t, 3);
+function modelProgress(now){ return reduce ? 1 : Math.min(1, (now - modelStart)/6500); }
+function updateBlocks(blk, prog){
+  [...$('blocks').children].forEach((el,i)=>{ el.className = 'blk' + (prog>=1 || i<blk ? ' done' : '') + (prog<1 && i===blk ? ' on':''); });
+}
+
+// ---------- legend & panel ----------
+function legend(){
+  const L = $('legend');
+  if (step === 'model'){
+    const isErr = vmode==='err';
+    const ramp = isErr ? [0,.02,.04,.06,.08].map(errColor) : [.95,.97,.99,1.01,1.03,1.05].map(vColor);
+    L.innerHTML = `<div class="lg"><span class="lbl">${isErr?'|V error| (pu)':'Voltage magnitude (pu)'}</span>
+      <div class="ramp">${ramp.map(c=>`<i style="background:${c}"></i>`).join('')}</div>
+      <div class="ticks">${(isErr?['0','0.02','0.04','0.06','0.08+']:['0.95','0.97','0.99','1.01','1.03','1.05']).map(t=>`<span>${t}</span>`).join('')}</div></div>`;
+    return;
+  }
+  const vals = [-60,0,30,50,70,100,150,400];
+  L.innerHTML = `<div class="lg"><span class="lbl">Local electricity price · CAD/MWh</span>
+      <div class="ramp">${vals.map(v=>`<i style="background:${lmpColor(v)}"></i>`).join('')}</div>
+      <div class="ticks">${['<0','0','30','50','70','100','150','400'].map(t=>`<span>${t}</span>`).join('')}</div></div>
+    <div class="lg"><span class="lbl">Map</span><div class="keys">
+      <span><i class="sw" style="background:${css('--kv500')}"></i>500 kV · <i class="sw" style="background:${css('--kv240')}"></i>240 · <i class="sw" style="background:${css('--kv138')}"></i>138 · <i class="sw" style="background:${css('--kv69')}"></i>69</span>
+      <span><i class="sw" style="background:${css('--hot')};height:5px"></i>line at its thermal limit · dots = power flow direction</span>
+      <span><i class="sw" style="background:${css('--dc')};height:8px;width:8px;border-radius:50%"></i>added data centre (size = MW) · ✕ line opened by switching</span></div></div>`;
+}
+function panel(){
+  const {c, label, dc, single} = curCase(), b = D.base;
+  $('c-ctrl').hidden = step !== 'add';
+  $('single-ctrl').hidden = !(step === 'add' && mode === 'single');
+  $('c-model').hidden = step !== 'model';
+  ['c-pay','c-hubs','c-curt'].forEach(id => $(id).hidden = step === 'model');
+  const dcTot = Object.values(dc||{}).reduce((a,x)=>a+x,0);
+  // status
+  if (step === 'model'){
+    $('status-big').textContent = `${M ? M.params.toLocaleString('en-CA') : '15,148,227'} parameters`;
+    $('status-sub').textContent = 'Graph transformer: 8 blocks × 128 hidden, 4 heads. Zero-shot on the Alberta base case.';
+    $('status-pill').innerHTML = `<span class="pill warn">P(feasible) = ${M?M.feas:'—'} · solver: feasible</span>`;
+  } else {
+    $('status-big').textContent = dcTot ? `${fmt(dcTot)} MW of data-centre load connected` : `${fmt(c.load_mw)} MW Alberta load`;
+    $('status-sub').textContent = step==='switch' ? `${D.switched.opened_names.length} line${D.switched.opened_names.length===1?'':'s'} opened: ${D.switched.opened_names.join(', ') || 'none'}` :
+      dcTot ? `median price ${c.lmp_median ?? '—'} CAD/MWh · max ${c.lmp_max ?? '—'}` : `winter evening, 2024-01-25 18:00 · median price ${c.lmp_median} CAD/MWh`;
+    const lv = c.relaxation_level;
+    $('status-pill').innerHTML = !c.feasible ? '<span class="pill bad">infeasible at every relaxation level</span>' :
+      lv === 0 ? '<span class="pill ok">AC-OPF feasible · no relaxation</span>' :
+      `<span class="pill warn">feasible only with relaxation ${lv}: ${c.relaxation_name}</span>`;
+  }
+  if (step === 'model'){ modelRows(); return; }
+  // payment
+  const pay = c.customer_payment, f = c.fuel_cost, g = c.generator_margin, r = c.congestion_loss_rent;
+  $('pay-big').textContent = c.feasible ? money(pay) : '—';
+  const mult = c.feasible ? pay / b.customer_payment : null;
+  const pm = $('pay-mult');
+  if (step === 'base' || mult == null){ pm.textContent = ''; }
+  else { pm.textContent = `×${mult.toFixed(2)} today's bill`; pm.className = 'mult ' + (mult > 1.001 ? 'up' : 'dn'); }
+  const tot = Math.max(1, f + Math.max(g,0) + Math.max(r,0));
+  const cols = [['--muted','fuel cost',f],['--cool','generator margin',g],['--hot','congestion & loss rent',r]];
+  ['st-fuel','st-gen','st-cong'].forEach((id,i)=>{ $(id).style.width = (c.feasible ? 100*Math.max(cols[i][2],0)/tot : 0) + '%'; $(id).style.background = css(cols[i][0]); });
+  $('pay-rows').innerHTML = cols.map(([v,n,x])=>`<div><i class="d" style="background:${css(v)}"></i><span>${n}</span><span class="v">${c.feasible?money(x):'—'}</span><span class="p">${c.feasible?Math.round(100*x/pay)+'%':''}</span></div>`).join('') +
+    (step!=='base' && c.feasible ? `<div><i class="d"></i><span>change vs today</span><span class="v" style="color:var(${pay>b.customer_payment?'--hot':'--ok'})">${pay>=b.customer_payment?'+':''}${money(pay-b.customer_payment)}</span><span class="p">per hour</span></div>` : '');
+  // hubs
+  const hs = Object.keys(D.hubs);
+  const ent = hs.map(h=>[h, (dc||{})[h]||0]).sort((a,b)=>b[1]-a[1]);
+  const mx = Math.max(500, ...ent.map(e=>e[1]));
+  $('hubs').innerHTML = ent.map(([h,v])=>`<div class="hub"><span>${h}</span><span class="bar"><i style="width:${100*v/mx}%"></i></span><span class="v">${v?fmt(v):'—'}</span></div>`).join('');
+  // curtailment
+  const cmax = Math.max(1000, b.curtailed_mw, D.buildout.curtailed_mw||0, D.switched.curtailed_mw||0);
+  $('curt-big').textContent = c.feasible ? `${fmt(c.curtailed_mw)} MW` : '—';
+  $('curt-bar').style.width = c.feasible ? (100*c.curtailed_mw/cmax)+'%' : '0%';
+  $('curt-sub').textContent = c.feasible ? `available wind and solar not dispatched because of congestion · today ${fmt(b.curtailed_mw)} MW` : '';
+  $('ov').innerHTML = `<span>CASE <b>${label}</b></span><span>BUSES <b>982</b> · LINES <b>1,171</b> · SNAPSHOT <b>2024-01-25 18:00</b></span>`;
+}
+function modelRows(){
+  if (!M) return;
+  const n = M.V_pred.length; let mv=0, mt=0;
+  for (let i=0;i<n;i++){ mv += Math.abs(M.V_pred[i]-M.V_true[i]); mt += Math.abs(M.theta_pred_deg[i]-M.theta_true_deg[i]); }
+  $('model-rows').innerHTML = [
+    ['--cool','V mean abs error', (mv/n).toFixed(4)+' pu'], ['--cool','θ mean abs error', (mt/n).toFixed(2)+'°'],
+    ['--warn','cost error vs solver','+23.5%'], ['--ok','inference / AC-OPF time','0.35 s / 6.5 s']
+  ].map(([c,k,v])=>`<div><i class="d" style="background:${css(c)}"></i><span>${k}</span><span class="v">${v}</span><span class="p"></span></div>`).join('');
+  $('ov').innerHTML = `<span>MODEL <b>GridSFM-Open v1.1</b> · CPU</span><span>VIEW <b>${vmode==='pred'?'predicted V':vmode==='true'?'solver V':'|V error|'}</b></span>`;
+}
+
+// ---------- interaction ----------
+function setStep(s){
+  step = s; document.querySelectorAll('.steps button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.step===s));
+  if (s==='model') modelStart = performance.now();
+  buildParticles(); legend(); panel();
+}
+document.querySelectorAll('.steps button').forEach(b=>b.addEventListener('click',()=>setStep(b.dataset.step)));
+$('m-build').addEventListener('click',()=>{mode='build';$('m-build').setAttribute('aria-pressed','true');$('m-single').setAttribute('aria-pressed','false');buildParticles();panel();});
+$('m-single').addEventListener('click',()=>{mode='single';$('m-single').setAttribute('aria-pressed','true');$('m-build').setAttribute('aria-pressed','false');buildParticles();panel();});
+['hub-sel','size-sel'].forEach(id=>$(id).addEventListener('change',()=>{buildParticles();panel();}));
+[['v-pred','pred'],['v-true','true'],['v-err','err']].forEach(([id,v])=>$(id).addEventListener('click',()=>{vmode=v;['v-pred','v-true','v-err'].forEach(x=>$(x).setAttribute('aria-pressed',x===id));legend();modelRows();}));
+$('v-replay').addEventListener('click',()=>{modelStart=performance.now();});
+cv.addEventListener('mousemove', e=>{
+  if (!D || !proj) return; const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  let best=-1, bd=144; D._bus.forEach(([bx,by],i)=>{const d=(bx-x)**2+(by-y)**2; if(d<bd){bd=d;best=i;}});
+  const tip = $('tip'); if (best<0){ tip.hidden=true; return; }
+  const {c} = curCase(); const nm = D.geo.bus_name ? D.geo.bus_name[best] : 'bus '+best;
+  let v = step==='model' && M ? `V pred ${M.V_pred[best].toFixed(3)} · solver ${M.V_true[best].toFixed(3)}` : (c && c.lmp ? `LMP ${c.lmp[best].toFixed(1)} CAD/MWh` : '');
+  tip.innerHTML = `${nm} · ${D.geo.bus_kv[best]} kV<br>${v}`; tip.style.left = x+'px'; tip.style.top = y+'px'; tip.hidden=false;
+});
+cv.addEventListener('mouseleave', ()=>{$('tip').hidden=true;});
+window.addEventListener('resize', ()=>{ setup(); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{legend();panel();});
+new MutationObserver(()=>{legend();panel();}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+// ---------- load ----------
+Promise.all([fetch('siting_data.json').then(r=>r.json()), fetch('gridsfm_base_pred.json').then(r=>r.json()).catch(()=>null)])
+.then(([d,m])=>{
+  D = d; M = m;
+  $('blocks').innerHTML = Array.from({length:8},(_,i)=>`<span class="blk">B${i+1}</span>`).join('');
+  $('hub-sel').innerHTML = Object.keys(D.hubs).map(h=>`<option>${h}</option>`).join('');
+  $('loading').hidden = true; setup(); legend(); panel(); requestAnimationFrame(draw);
+}).catch(err=>{ $('loading').textContent = 'Could not load the solved cases (' + err.message + ').'; });
+})();
+</script>

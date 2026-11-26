@@ -97,3 +97,31 @@ def fetch_gen_capacity(cfg: dict, raw_root: Path):
     record(raw_root, f, url, {"startDate": a["gen_capacity_start"], "endDate": a["gen_capacity_end"],
                               "chunk_days": 31}, note=f"{len(df)} rows")
     return f
+
+
+def fetch_metered_assets(cfg: dict, raw_root: Path, asset_ids, start: str, end: str,
+                         name: str = "renewables"):
+    """Hourly metered volume for selected assets (one call per asset; the
+    by-asset endpoint returns ~100K records/call, enough for a year)."""
+    out = raw_root / "aeso"
+    rows, missing = [], []
+    url = None
+    for aid in sorted(set(asset_ids)):
+        url, d = _call(cfg, "metered_volume", {"startDate": start, "endDate": end, "asset_ID": aid},
+                       timeout=600)
+        got = False
+        for pp_ in d:
+            for a in pp_["asset_list"]:
+                if a["asset_ID"] != aid:
+                    continue
+                got = True
+                rows.extend((aid, m["begin_date_mpt"], m["metered_volume"]) for m in a["metered_volume_list"])
+        if not got:
+            missing.append(aid)
+    df = pd.DataFrame(rows, columns=["asset_ID", "begin_date_mpt", "metered_volume_mwh"])
+    f = out / f"metered_{name}_{start}_{end}.csv.gz"
+    df.to_csv(f, index=False)
+    record(raw_root, f, url, {"startDate": start, "endDate": end, "assets": len(set(asset_ids))},
+           note=f"{len(df)} rows, {df.asset_ID.nunique()} assets, missing {len(missing)}")
+    log.info("metered %s: %d rows, %d assets, %d missing", name, len(df), df.asset_ID.nunique(), len(missing))
+    return f, missing

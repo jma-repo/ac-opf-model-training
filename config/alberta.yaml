@@ -159,3 +159,24 @@ opf:
     - {level: 2, name: voltage_0.90-1.10, vmin_pu: 0.90, vmax_pu: 1.10}
     - {level: 3, name: reactive_support, svc_mvar: 200, svc_kv_min: 240}
     - {level: 4, name: load_shedding_slack, voll: 5000}
+
+scenarios:
+  run_name: s1000
+  n: 1000
+  seed: 20261127
+  n_processes: 4
+  hours_year: 2024                 # real hours: planning-area load + metered wind/solar
+  local_load_noise: 0.05           # synthetic: per-bus multiplicative U(-σ, σ)
+  families:                        # fraction of scenarios per family
+    base_hourly: 0.40              # real hour, all elements in service
+    n1_line: 0.25                  # + one random non-bridge AC branch out
+    n1_gen: 0.15                   # + one random unit out (not the slack unit)
+    large_load: 0.20               # + data-centre load at a candidate bus
+  large_load:
+    sizes_mw: [100, 300, 500]
+    candidate_kv: [138, 240]
+    power_factor: 0.98
+  hvdc_schedule_range_mw: [0, 1000]     # north->south, per link, uniform (synthetic)
+  intertie_range: true                  # uniform in [-export, import] per neighbour (synthetic)
+  relax_in_scenarios: true              # run the relaxation hierarchy and record the level
+  export_pyg: true                      # write OPFData .pyg.json per scenario

@@ -17,11 +17,19 @@ ANG_DEG = 30.0
 
 
 def build_case(net, solved: bool = False) -> dict:
+    """Out-of-service lines, transformers, generators and loads are omitted
+    (N-1 scenarios); bus numbering is unchanged."""
+    import copy as _copy
+    net = _copy.copy(net)
+    for et in ("line", "trafo", "gen", "load"):
+        net[et] = net[et][net[et].in_service.astype(bool)]
+        if solved:
+            net[f"res_{et}"] = net[f"res_{et}"].loc[net[et].index]
     base = float(net.sn_mva)
     w = 2 * math.pi * float(net.f_hz)
     buses = list(net.bus.index)
     num = {b: i + 1 for i, b in enumerate(buses)}       # MATPOWER bus numbers 1..N
-    slack = set(net.gen.bus[net.gen.slack]) | set(net.ext_grid.bus)
+    slack = set(net.gen.bus[net.gen.slack.astype(bool)]) | set(net.ext_grid.bus)
     gen_buses = set(net.gen.bus)
     pd = net.load.groupby("bus").p_mw.sum()
     qd = net.load.groupby("bus").q_mvar.sum()
