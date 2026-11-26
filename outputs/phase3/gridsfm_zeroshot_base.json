@@ -1,0 +1,65 @@
+[
+ {
+  "case": "case500_goc.pyg.json",
+  "n_bus": 500,
+  "n_gen": 171,
+  "infer_s": 0.232,
+  "V_mae_pu": 0.0011,
+  "theta_mae_deg": 1.197,
+  "Pg_mae_MW": 0.64,
+  "Qg_mae_MVAr": 4.08,
+  "Pg_sum_pred_MW": 18052.5,
+  "Pg_sum_true_MW": 18096.3,
+  "load_MW": 17772.9,
+  "cost_true": 454946.0,
+  "cost_pred": 452496.4,
+  "cost_err_%": -0.54,
+  "feas_prob": 0.997,
+  "V_pred_range": [
+   0.977,
+   1.1
+  ]
+ },
+ {
+  "case": "msr_colorado.pyg.json",
+  "n_bus": 651,
+  "n_gen": 99,
+  "infer_s": 0.279,
+  "V_mae_pu": 0.0013,
+  "theta_mae_deg": 0.937,
+  "Pg_mae_MW": 0.8,
+  "Qg_mae_MVAr": 5.54,
+  "Pg_sum_pred_MW": 9731.0,
+  "Pg_sum_true_MW": 9704.3,
+  "load_MW": 9559.3,
+  "cost_true": 123074.8,
+  "cost_pred": 123980.5,
+  "cost_err_%": 0.74,
+  "feas_prob": 1.0,
+  "V_pred_range": [
+   0.997,
+   1.05
+  ]
+ },
+ {
+  "case": "alberta_base.pyg.json",
+  "n_bus": 982,
+  "n_gen": 253,
+  "infer_s": 0.351,
+  "V_mae_pu": 0.0376,
+  "theta_mae_deg": 6.241,
+  "Pg_mae_MW": 21.93,
+  "Qg_mae_MVAr": 17.15,
+  "Pg_sum_pred_MW": 12816.0,
+  "Pg_sum_true_MW": 12506.3,
+  "load_MW": 12178.5,
+  "cost_true": 280752.6,
+  "cost_pred": 346627.8,
+  "cost_err_%": 23.46,
+  "feas_prob": 0.345,
+  "V_pred_range": [
+   0.993,
+   1.05
+  ]
+ }
+]

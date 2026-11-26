@@ -8,3 +8,4 @@ outputs/**/*.pbf
 .env
 *.egg-info/
 .venv-fm/
+data/models/
