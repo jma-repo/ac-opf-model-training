@@ -6,3 +6,4 @@ data/raw/**
 data/interim/
 outputs/**/*.pbf
 .env
+*.egg-info/
