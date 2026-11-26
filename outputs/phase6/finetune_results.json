@@ -1,0 +1,56 @@
+{
+ "config": {
+  "scenario_run": "s1250c",
+  "seed": 42,
+  "n_test": 150,
+  "n_val": 100,
+  "rounds": [
+   10,
+   100,
+   1000
+  ],
+  "epochs": {
+   "10": 10,
+   "100": 10,
+   "default": 4
+  },
+  "batch_size": 8,
+  "lr": 0.0001,
+  "infeas_prob": 0.2,
+  "threads": 4
+ },
+ "run": "s1250c",
+ "splits": {
+  "test": 149,
+  "val": 100,
+  "train_pool": 1001
+ },
+ "rounds": {
+  "0": {
+   "n_train": 0,
+   "test": {
+    "n": 149,
+    "n_feasible": 128,
+    "V_mae_pu": 0.0342,
+    "theta_mae_deg": 4.504,
+    "Pg_mae_mw": 9.93,
+    "Qg_mae_mvar": 18.59,
+    "cost_err_abs_pct": 18.74,
+    "cost_err_mean_pct": 8.83,
+    "feas_accuracy": 0.859,
+    "infeasible_f1": 0.0,
+    "confusion": {
+     "tp": 128,
+     "fp": 21,
+     "fn": 0,
+     "tn": 0
+    },
+    "ece": 0.121,
+    "infer_s_median": 0.275,
+    "solver_s_median": 6.37,
+    "speedup_median": 22.9
+   },
+   "log": []
+  }
+ }
+}
