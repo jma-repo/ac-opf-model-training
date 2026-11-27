@@ -223,3 +223,23 @@ finetune:
   lr: 1.0e-4
   infeas_prob: 0.2              # share of feasible graphs perturbed by SyntheticMixedDataset
   threads: 4
+  refine:              # Phase 6b: angle-weighted continuation of FT-1000
+    n_train: 1000
+    theta_weight: 20.0
+    lr: 5.0e-5
+    epochs: 4
+
+siting:                 # Phase 7: data-centre siting screen
+  snapshots:
+    winter_peak: "2024-01-25 18:00"
+    summer_peak: auto_max_load_jul      # highest grid-served load hour in the July metered window
+  candidate_kv: [138, 240]
+  sizes_mw: [100, 300, 500]
+  pf: 0.98
+  checkpoint: gridsfm_alberta_n1000_refined.pt
+  verify:               # solver checks per snapshot x size
+    top: 5              # most attractive predicted-feasible sites (lowest cost increase)
+    borderline: 5       # p_feasible closest to 0.5
+    worst: 3            # lowest p_feasible
+    random: 3
+    seed: 11
