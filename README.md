@@ -26,8 +26,8 @@ states what share of each attribute came from open data.
 | 3. Electrical parameters + base case | done — `outputs/phase3/phase3_report.md` (DC- and AC-OPF solve at relaxation level 0); GridSFM zero-shot smoke test run |
 | 4. Exports, verification, relaxation hierarchy | done — `outputs/phase4/phase4_report.md` (PowerModels + Ipopt cross-check matches) |
 | 5. Scenarios | done — `outputs/phase5/phase5_report.md`; calibrated rerun `s1250c` (1,250) after cost calibration (`data/interim/params/calibration.json`) |
-| 6. GridSFM zero-shot vs fine-tuned | in review — `outputs/phase6/phase6_report.md` (FT-1000: cost error 4.3%, infeasible F1 0.83) |
-| 7. Data-centre siting | not started; siting visual prototype in `outputs/visual/` |
+| 6. GridSFM zero-shot vs fine-tuned | done — `outputs/phase6/phase6_report.md` (FT-1000 + θ refine: cost error 4.45%, θ 2.2°, infeasible F1 0.83; warm start gives no speed-up; gridfm-graphkit skipped, no public weights) |
+| 7. Data-centre siting | done (in review) — `outputs/phase7/phase7_report.md` (4,914-case screen + 96 solver checks); interactive prototype in `outputs/visual/` |
 
 ## Reproducing
 ```bash
@@ -43,6 +43,19 @@ python -m abgrid.cli phase4             # MATPOWER / PowerModels / GridSFM expor
 python -m abgrid.cli scenarios          # Phase 5: config `scenarios` block (n, families, seed)
 julia src/abgrid/julia/solve_pm.jl outputs/phase4/alberta_base.m out.json   # PowerModels cross-check
 pytest -q                               # topology tests
+
+# Cost calibration (inverse OPF on 2024 metered dispatch) -> data/interim/params/calibration.json
+python -c "from abgrid.config import load_config; from abgrid.params.calibrate import run; run(load_config())"
+
+# Phase 6-7 run in a separate GridSFM environment (.venv-fm: torch CPU + torch_geometric + gridsfm)
+.venv-fm/bin/python -I src/abgrid/fm/finetune.py --rounds 10,100,1000   # zero-shot + fine-tuning rounds
+.venv-fm/bin/python -I src/abgrid/fm/refine.py                          # θ-weighted continuation (Phase 6b)
+.venv-fm/bin/python -I src/abgrid/fm/warmstart.py predict 30            # warm-start test (Phase 6c) ...
+.venv/bin/python -m abgrid.fm.warmstart solve                           # ... solver side
+.venv/bin/python -m abgrid.usecase.siting_screen base                   # Phase 7 base snapshots
+.venv-fm/bin/python -I src/abgrid/usecase/siting_screen.py screen       # Phase 7 model screen
+.venv/bin/python -m abgrid.usecase.siting_screen verify                 # Phase 7 solver check
+.venv/bin/python -m abgrid.usecase.siting_screen report
 ```
 CODERS is optional and needs `CODERS_API_KEY` (sent as a `key` URL parameter over HTTPS;
 scrubbed from logs and the manifest).
@@ -91,6 +104,34 @@ https://www.openstreetmap.org/copyright.
 - Solver: pandapower 3.5 / PYPOWER interior point (requires scipy < 1.14).
 - Provenance across all tracked attributes: `outputs/provenance_report.csv`.
 
+## Results summary (Phases 5–7)
+All numbers are for this approximate model. They show the method and are not facts about the real Alberta system.
+
+- **Scenarios (Phase 5).** 1,250 AC-OPF-labelled scenarios (run `s1250c`):
+  - families: base hourly, N-1 line, N-1 generator, large new load;
+  - 1,091 solve at nominal limits; 138 need a relaxation level; 21 are infeasible.
+- **GridSFM (Phase 6).** Test split of 149 scenarios:
+  - Zero-shot: cost error 18.7%, and it labels every infeasible case feasible.
+  - Fine-tuned on 1,000 scenarios plus an angle-weighted continuation:
+    - cost error 4.45%;
+    - errors: V 0.013 pu, θ 2.2°, Pg 3.2 MW;
+    - feasibility accuracy 0.96, infeasible F1 0.83, ECE 0.02;
+    - about 18–24× faster than the solver on CPU.
+  - Using the prediction as the starting point for the interior-point AC-OPF gave **no** speed-up.
+- **Siting screen (Phase 7).** 4,914 site × size × peak cases screened in about 32 min, against an estimated 54 h by brute force.
+  - The model reliably rules out bad sites.
+  - Its top picks for 300–500 MW are over-optimistic: only 12 of 30 are confirmed by the solver.
+  - Its cost ranking is weak (correlation 0.26).
+  - Recommended workflow: model as a pre-filter, solver for every shortlisted site.
+
 ## Limitations
-Approximate topology, synthetic electrical parameters, illustrative cost curves.
-Not for operational use. Details will be added per phase.
+- **Not AESO's grid.** The topology comes from open line and substation geometry with heuristic conflation. Many lines, ratings,
+  impedances, transformer data and the reactive compensation are synthetic engineering defaults (see the provenance report). The
+  real parameters are not public.
+- **Costs are illustrative.** Generator cost curves are calibrated to 2024 metered dispatch by inverse OPF, but they are not offers,
+  and the LMPs are not pool prices.
+- **Simplifications.** Interties are modelled as boundary generators, HVDC as a fixed load+generator pair, distribution as
+  aggregated loads. There are no protection, stability or short-circuit checks, and only N-1 cases were sampled.
+- **ML evaluation is in-distribution.** Train and test come from the same generator and topology. Large single-site loads are
+  under-represented, so model accuracy on siting questions is lower than on the test split.
+- **Not for operational, planning, market, interconnection or investment decisions.**

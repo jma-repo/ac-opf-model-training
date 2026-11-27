@@ -1,0 +1,74 @@
+{
+ "snapshots": {
+  "winter_peak": {
+   "hour": "2024-01-25 18:00:00",
+   "cost": 262516.2,
+   "lmp_median": 59.35,
+   "ac_s": 7.39,
+   "n_candidates": 819
+  },
+  "summer_peak": {
+   "hour": "2024-07-22 17:00:00",
+   "cost": 332221.2,
+   "lmp_median": 105.66,
+   "ac_s": 10.02,
+   "n_candidates": 819
+  }
+ },
+ "n_screened": 4914,
+ "screen_infer_s_total": 1935.8,
+ "screen_infer_s_median": 0.385,
+ "solver_s_median_verified": 39.6,
+ "brute_force_solver_hours_est": 54.05,
+ "predicted_feasible_share": {
+  "100": {
+   "summer_peak": 0.968,
+   "winter_peak": 0.977
+  },
+  "300": {
+   "summer_peak": 0.402,
+   "winter_peak": 0.46
+  },
+  "500": {
+   "summer_peak": 0.123,
+   "winter_peak": 0.325
+  }
+ },
+ "verify_n": 96,
+ "verify_confusion": {
+  "tp": 23,
+  "fp": 28,
+  "fn": 5,
+  "tn": 40
+ },
+ "verify_accuracy": 0.656,
+ "verify_by_reason": {
+  "borderline": {
+   "n": 30,
+   "solver_feasible": 8,
+   "model_says_feasible": 14,
+   "agree": 16
+  },
+  "random": {
+   "n": 18,
+   "solver_feasible": 8,
+   "model_says_feasible": 7,
+   "agree": 17
+  },
+  "top": {
+   "n": 30,
+   "solver_feasible": 12,
+   "model_says_feasible": 30,
+   "agree": 12
+  },
+  "worst": {
+   "n": 18,
+   "solver_feasible": 0,
+   "model_says_feasible": 0,
+   "agree": 18
+  }
+ },
+ "dcost_mae_cad_h": 18524.0,
+ "dcost_corr": 0.259,
+ "true_dcost_per_mwh_median": 65.5
+}
