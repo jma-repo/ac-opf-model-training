@@ -1,0 +1,37 @@
+{
+ "n": 30,
+ "checkpoint": "gridsfm_alberta_n1000_refined.pt",
+ "flat": {
+  "converged": 30,
+  "median_s": 7.66,
+  "median_iterations": 27.0,
+  "cost_vs_label_pct_max": 0.0
+ },
+ "dc_pf": {
+  "converged": 26,
+  "median_s": 8.67,
+  "median_iterations": 27.0,
+  "cost_vs_label_pct_max": 0.0
+ },
+ "fm_pf": {
+  "converged": 24,
+  "median_s": 8.55,
+  "median_iterations": 28.0,
+  "cost_vs_label_pct_max": 0.0
+ },
+ "fm_pfv": {
+  "converged": 17,
+  "median_s": 11.25,
+  "median_iterations": 40.0,
+  "cost_vs_label_pct_max": 0.0
+ },
+ "fm_full": {
+  "converged": 0,
+  "median_s": NaN,
+  "median_iterations": NaN,
+  "cost_vs_label_pct_max": NaN
+ },
+ "speedup_fm_full_vs_dc_pf_median": null,
+ "speedup_fm_pfv_vs_dc_pf_median": 0.85,
+ "speedup_fm_pf_vs_dc_pf_median": 1.06
+}

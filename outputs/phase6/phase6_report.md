@@ -42,6 +42,26 @@ Inference 0.24–0.29 s/scenario vs AC-OPF 6.4 s median → ~24× faster (CPU, s
 5. Caveat: train and test come from the same synthetic generator and topology, so this measures interpolation inside our model,
    not real-world accuracy.
 
+## Warm-start test (Phase 6c, refined checkpoint, 30 feasible test scenarios)
+
+Can the model's prediction be used as the AC-OPF starting point to make the solver faster? (`src/abgrid/fm/warmstart.py`,
+`warmstart_results.{csv,json}`.) Solver: pandapower PIPS interior point, same limits as the labels.
+
+| Start | Converged | Median time s | Median iterations |
+|---|---|---|---|
+| flat (default) | **30 / 30** | **7.66** | **27** |
+| DC-OPF Pg + power flow | 26 / 30 | 8.67 (incl. DC) | 27 |
+| model Pg + power flow | 24 / 30 | 8.55 | 28 |
+| model Pg + model gen voltages | 17 / 30 | 11.25 | 40 |
+| model Pg + full V/θ (`init="results"`) | 0 / 30 | – | – |
+
+When a run converged, its cost matched the label (0.0% difference).
+
+**Finding: no speed-up.** For an interior-point solver, a good initial point matters little. PIPS rebuilds its own interior barrier
+start, and a point close to the optimum sits near active limits, which hurts it. The full V/θ start never converged. Warm starts pay
+off mainly for active-set or Newton-type solvers, or for repeated solves with a fixed active set. In this project the model's value is
+**screening** (deciding which cases need the solver at all), not speeding up each individual solve.
+
 ## Not done in this phase
 - **gridfm-graphkit comparison — skipped (decision recorded).** No public pretrained weights were found for
   gridfm-graphkit 0.9.x, so a comparison would mean training it from scratch, which the project scope excludes. It also
