@@ -89,7 +89,7 @@ a{color:var(--accent)}
   <div class="crumb">jma-repo/ac-opf-model-training › outputs/notebook › pipeline_notebook</div>
   <h1>Alberta Grid FM Notebook</h1>
   <div class="meta">
-    <span>commit <b>b9abe32</b></span>
+    <span>scenario run <b>s1250c</b></span>
     <span>compute <b>CPU · 4 cores · no GPU</b></span>
     <span>pipeline env <b>py3.12 · pandapower 3.5.6 · scipy 1.13.1</b></span>
     <span>FM env <b>torch 2.8.0+cpu · torch_geometric 2.8.1 · gridsfm 1.1.0</b></span>
@@ -106,7 +106,9 @@ a{color:var(--accent)}
   <a href="#features"><span class="n">Cmd 4</span>Feature engineering<i class="dot ok"></i></a>
   <a href="#model"><span class="n">Cmd 5</span>Model<i class="dot ok"></i></a>
   <a href="#zeroshot"><span class="n">Cmd 6</span>Zero-shot inference<i class="dot ok"></i></a>
-  <a href="#finetune"><span class="n">Cmd 7</span>Fine-tuning<i class="dot warn"></i></a>
+  <a href="#calib"><span class="n">Cmd 7a</span>Cost calibration<i class="dot ok"></i></a>
+  <a href="#process"><span class="n">Cmd 7b</span>Training step by step<i class="dot ok"></i></a>
+  <a href="#finetune"><span class="n">Cmd 7c</span>Fine-tuning results<i class="dot ok"></i></a>
   <a href="#verify"><span class="n">Cmd 8</span>Export &amp; verification<i class="dot ok"></i></a>
   <a href="#next"><span class="n">Cmd 9</span>Next runs<i class="dot warn"></i></a>
 </nav>
@@ -233,24 +235,64 @@ negative LMPs, fixed HVDC injections. The model predicts V in 0.993–1.05 and c
 </section>
 
 <!-- ============ 7 FINE-TUNE ============ -->
-<section class="cell" id="finetune">
-  <div class="cell-h"><span class="cmd">Cmd 7</span><h2>Fine-tuning</h2><span class="pill warn">not run yet</span></div>
-  <div class="notrun"><strong>No fine-tuning has been run.</strong> It needs the Phase 5 scenario set first. The cell below is the planned configuration; this page will be updated with real results.</div>
-  <div class="src"><span class="tag">planned</span><pre><span class="k">from</span> gridsfm <span class="k">import</span> load_model, SyntheticMixedDataset, finetune_opfdata
-model = load_model(<span class="c">"gridsfm_open_v1.1.pt"</span>)            <span class="c"># fresh release weights per round</span>
-train = SyntheticMixedDataset(alberta_scenarios, infeas_prob=<span class="k">0.3</span>, seed=<span class="k">42</span>,
-                              transform=cycle_basis_plus_hodge_pe)
-log = finetune_opfdata(model, DataLoader(train, batch_size=<span class="k">8</span>, shuffle=True),
-                       epochs=<span class="k">10</span>, lr=<span class="k">1e-4</span>)                     <span class="c"># AdamW</span></pre></div>
+<section class="cell" id="calib">
+  <div class="cell-h"><span class="cmd">Cmd 7a</span><h2>Cost calibration</h2><span class="pill ok">ran · kept illustrative costs</span></div>
+  <div class="md"><p>Before generating training data, the dispatch was checked against AESO metered unit output for 2024. Most of the gain came from fixing the model structure; fitting cost slopes by inverse optimisation did not beat the illustrative merit order, so those costs stay.</p>
+  <ul>
+    <li>Load = AESO planning-area grid-served <code>Load</code> (excludes industrial self-supply).</li>
+    <li>Cogeneration, hydro and biomass pinned to metered output each hour; wind and solar availability = metered output.</li>
+    <li>Interchange = metered imports − exports, split across tie lines by rating.</li>
+    <li>Gas units: <code>c1 = a + b·(1 − capacity factor)</code> per fuel, (a, b) fitted with Nelder–Mead on 24 hours, checked with AC-OPF on 12 held-out hours.</li>
+  </ul></div>
+  <div class="src"><span class="tag">source</span><pre>python -c "from abgrid.config import load_config; from abgrid.params import calibrate; calibrate.run(load_config())"</pre></div>
   <div class="tbl"><table>
-    <thead><tr><th>Round</th><th class="num">Train scenarios</th><th>Held-out evaluation</th><th>Status</th></tr></thead>
+    <thead><tr><th>Version</th><th class="num">Unit corr vs AESO</th><th class="num">Unit MAE MW</th><th class="num">Fit score</th></tr></thead>
     <tbody>
-      <tr><td>0-shot</td><td class="num">0</td><td>base case only</td><td class="src-open">done (Cmd 6)</td></tr>
-      <tr><td>FT-10</td><td class="num">10</td><td rowspan="3">same test split: cost error, V/θ/Pg/Qg MAE, feasibility F1, KCL residual, time vs solver, warm-start speed-up</td><td class="src-syn">planned</td></tr>
-      <tr><td>FT-100</td><td class="num">100</td><td class="src-syn">planned</td></tr>
-      <tr><td>FT-1000</td><td class="num">1,000</td><td class="src-syn">planned</td></tr>
+      <tr><td>Before (load incl. self-supply, all units on price)</td><td class="num">0.54</td><td class="num">—</td><td class="num">—</td></tr>
+      <tr class="hl"><td>Structural fixes + illustrative costs (used)</td><td class="num">0.75</td><td class="num">54.1</td><td class="num">346.9</td></tr>
+      <tr><td>Structural fixes + fitted cost slopes</td><td class="num">0.76</td><td class="num">52.5</td><td class="num">459.1</td></tr>
+      <tr><td>Grid search, flat CC / steam / peaker</td><td class="num">—</td><td class="num">—</td><td class="num">350.7 (40 / 60 / 90)</td></tr>
     </tbody></table></div>
-  <div class="md"><p>GridSFM supports fine-tuning only on the OPFData format, which is why the exporter writes the exact OPFData widths (4/11/9/11). The gridfm-graphkit route will be compared in Phase 6.</p></div>
+  <div class="out"><span class="tag">notes</span><pre>Remaining error is structural: no unit commitment or minimum output, one cost per fuel type,
+some generation not in metered data. Combined cycle is still dispatched ~500 MW above actual.</pre></div>
+</section>
+
+<section class="cell" id="process">
+  <div class="cell-h"><span class="cmd">Cmd 7b</span><h2>How the training works, step by step</h2><span class="pill ok">reference</span></div>
+  <div class="md">
+    <div class="flow"><span>1 data</span><em>→</em><span>2 graph</span><em>→</em><span>3 features</span><em>→</em><span>4 model</span><em>→</em><span>5 loss</span><em>→</em><span>6 train</span><em>→</em><span>7 evaluate</span></div>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Step</th><th>What happens</th><th>Code</th></tr></thead>
+    <tbody>
+      <tr><td>1 · Data</td><td>Each scenario is solved by AC-OPF. The solver's answer (θ, V, Pg, Qg, branch flows) is the label; relaxation level 0 means feasible. 1,250 scenarios split into test 149, val 100, train pool 1,001, stratified by family.</td><td><code>scenarios/generate.py</code>, <code>fm/finetune.py:splits</code></td></tr>
+      <tr><td>2 · Graph</td><td>A scenario becomes a heterogeneous graph: bus, generator, load nodes, and line/transformer edges with per-unit features. Labels attach as <code>bus.y</code>, <code>generator.y</code>, <code>edge_label</code>, <code>feasible</code>.</td><td><code>export/case.py</code>, <code>fm/dataset.py:load_labelled</code></td></tr>
+      <tr><td>3 · Features</td><td>Fixed, not learned: branches turned into nodes, cycle basis, effective-resistance landmarks, DC power-flow features, bus-type one-hot, Hodge positional encodings (see Cmd 4).</td><td><code>fm/dataset.py:make_transform</code></td></tr>
+      <tr><td>4 · Model</td><td>Start from the released GridSFM weights every round (no from-scratch network). 8 transformer blocks pass messages between node types; 5 heads predict θ, V, Pg, Qg and a feasibility logit.</td><td><code>gridsfm.load_model</code></td></tr>
+      <tr><td>5 · Loss</td><td>Sum of regression errors on θ, V, Pg, Qg and flows plus binary cross-entropy on feasibility. Infeasible graphs have no valid labels, so they only train the feasibility head.</td><td><code>gridsfm compute_loss</code></td></tr>
+      <tr><td>6 · Train</td><td>Mini-batches of 8 graphs, AdamW lr 1e-4. 20% of feasible graphs are perturbed into synthetic infeasible cases so the feasibility head sees enough negatives; real infeasible scenarios are added too. Validation loss each epoch.</td><td><code>fm/dataset.py:train_dataset</code>, <code>gridsfm.finetune_opfdata</code></td></tr>
+      <tr><td>7 · Evaluate</td><td>On the untouched test split: MAE vs solver, cost recomputed from predicted Pg, feasibility accuracy, F1 on the infeasible class, calibration (ECE), time vs solver.</td><td><code>fm/finetune.py:evaluate</code></td></tr>
+    </tbody></table></div>
+</section>
+
+<section class="cell" id="finetune">
+  <div class="cell-h"><span class="cmd">Cmd 7c</span><h2>Fine-tuning results</h2><span class="pill ok">ran · CPU · 1.5 h</span></div>
+  <div class="src"><span class="tag">source</span><pre>. .venv-fm/bin/activate
+python -I src/abgrid/fm/finetune.py --run s1250c   <span class="c"># 0-shot, then FT-10 / 100 / 1000 from fresh weights</span></pre></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Round</th><th class="num">Train (feas/infeas)</th><th class="num">Epochs</th><th class="num">Train time</th><th class="num">V MAE pu</th><th class="num">θ MAE °</th><th class="num">Pg MAE MW</th><th class="num">Qg MAE MVAr</th><th class="num">|Cost err|</th><th class="num">Feas acc</th><th class="num">Infeas F1</th><th class="num">ECE</th></tr></thead>
+    <tbody>
+      <tr><td>0-shot</td><td class="num">0</td><td class="num">–</td><td class="num">–</td><td class="num">0.0342</td><td class="num">4.50</td><td class="num">9.93</td><td class="num">18.59</td><td class="num">18.7%</td><td class="num">0.859</td><td class="num">0.00</td><td class="num">0.121</td></tr>
+      <tr><td>FT-10</td><td class="num">9 / 1</td><td class="num">10</td><td class="num">6 min</td><td class="num">0.0211</td><td class="num">2.64</td><td class="num">7.37</td><td class="num">14.06</td><td class="num">13.8%</td><td class="num">0.812</td><td class="num">0.42</td><td class="num">0.169</td></tr>
+      <tr><td>FT-100</td><td class="num">84 / 16</td><td class="num">10</td><td class="num">19 min</td><td class="num">0.0159</td><td class="num">2.21</td><td class="num">4.70</td><td class="num">9.61</td><td class="num">9.8%</td><td class="num">0.866</td><td class="num">0.60</td><td class="num">0.124</td></tr>
+      <tr class="hl"><td><strong>FT-1000</strong></td><td class="num">878 / 122</td><td class="num">4</td><td class="num">65 min</td><td class="num">0.0133</td><td class="num">5.59</td><td class="num">3.25</td><td class="num">8.38</td><td class="num">4.3%</td><td class="num">0.960</td><td class="num">0.83</td><td class="num">0.031</td></tr>
+    </tbody></table></div>
+  <div class="out"><span class="tag">notes</span><pre>Test split: 149 scenarios (128 feasible, 21 infeasible). Inference ~0.27 s vs AC-OPF 6.4 s (~24x).
+0-shot calls every case feasible (0/21 infeasible caught). FT-1000 catches 15/21 with no false alarms.
+θ regresses at FT-1000: angle spread is compressed (slope 0.95 -> 0.87, branch Δθ MAE 0.25° -> 0.60°),
+likely from only 4 epochs and the multi-task loss favouring Pg/feasibility. Not fixed yet.
+Train and test come from the same synthetic generator: this is interpolation inside our model.</pre></div>
+  <div class="md"><p>Not run yet: gridfm-graphkit comparison, warm-start speed-up, KCL residual.</p></div>
 </section>
 
 <!-- ============ 8 VERIFY ============ -->
@@ -283,7 +325,7 @@ pytest -q                      <span class="c"># topology + export + relaxation 
 <section class="cell" id="next">
   <div class="cell-h"><span class="cmd">Cmd 9</span><h2>Next runs</h2><span class="pill warn">queued</span></div>
   <div class="md">
-    <div class="flow"><span>Phase 5 · ~1,000 scenarios</span><em>→</em><span>Phase 6 · FT 10/100/1000</span><em>→</em><span>Phase 7 · data-centre siting</span></div>
+    <div class="flow"><span>Phase 5 · 1,250 scenarios ✓</span><em>→</em><span>Phase 6 · FT 10/100/1000 ✓</span><em>→</em><span>Phase 7 · data-centre siting</span></div>
     <ul>
       <li>Scenarios: AIL seasonal/hourly shapes, wind/solar availability, N-1 line and unit outages, HVDC and intertie schedules, 100/300/500 MW data-centre loads.</li>
       <li>Each scenario keeps its relaxation level and feasibility label for the feasibility head.</li>

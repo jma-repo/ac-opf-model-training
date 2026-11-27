@@ -25,8 +25,9 @@ states what share of each attribute came from open data.
 | 2. Bus-branch topology | done — `outputs/phase2/phase2_report.md` |
 | 3. Electrical parameters + base case | done — `outputs/phase3/phase3_report.md` (DC- and AC-OPF solve at relaxation level 0); GridSFM zero-shot smoke test run |
 | 4. Exports, verification, relaxation hierarchy | done — `outputs/phase4/phase4_report.md` (PowerModels + Ipopt cross-check matches) |
-| 5. Scenarios | in review — `outputs/phase5/phase5_report.md` (1,000 scenarios) |
-| 6–7 | not started; siting visual prototype in `outputs/visual/` |
+| 5. Scenarios | done — `outputs/phase5/phase5_report.md`; calibrated rerun `s1250c` (1,250) after cost calibration (`data/interim/params/calibration.json`) |
+| 6. GridSFM zero-shot vs fine-tuned | in review — `outputs/phase6/phase6_report.md` (FT-1000: cost error 4.3%, infeasible F1 0.83) |
+| 7. Data-centre siting | not started; siting visual prototype in `outputs/visual/` |
 
 ## Reproducing
 ```bash
