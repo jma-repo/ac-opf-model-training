@@ -109,8 +109,10 @@ a{color:var(--accent)}
   <a href="#calib"><span class="n">Cmd 7a</span>Cost calibration<i class="dot ok"></i></a>
   <a href="#process"><span class="n">Cmd 7b</span>Training step by step<i class="dot ok"></i></a>
   <a href="#finetune"><span class="n">Cmd 7c</span>Fine-tuning results<i class="dot ok"></i></a>
+  <a href="#warmstart"><span class="n">Cmd 7d</span>Warm-start test<i class="dot warn"></i></a>
+  <a href="#siting"><span class="n">Cmd 7e</span>Siting screen<i class="dot ok"></i></a>
   <a href="#verify"><span class="n">Cmd 8</span>Export &amp; verification<i class="dot ok"></i></a>
-  <a href="#next"><span class="n">Cmd 9</span>Next runs<i class="dot warn"></i></a>
+  <a href="#next"><span class="n">Cmd 9</span>Status &amp; next steps<i class="dot ok"></i></a>
 </nav>
 
 <main>
@@ -285,14 +287,61 @@ python -I src/abgrid/fm/finetune.py --run s1250c   <span class="c"># 0-shot, the
       <tr><td>0-shot</td><td class="num">0</td><td class="num">–</td><td class="num">–</td><td class="num">0.0342</td><td class="num">4.50</td><td class="num">9.93</td><td class="num">18.59</td><td class="num">18.7%</td><td class="num">0.859</td><td class="num">0.00</td><td class="num">0.121</td></tr>
       <tr><td>FT-10</td><td class="num">9 / 1</td><td class="num">10</td><td class="num">6 min</td><td class="num">0.0211</td><td class="num">2.64</td><td class="num">7.37</td><td class="num">14.06</td><td class="num">13.8%</td><td class="num">0.812</td><td class="num">0.42</td><td class="num">0.169</td></tr>
       <tr><td>FT-100</td><td class="num">84 / 16</td><td class="num">10</td><td class="num">19 min</td><td class="num">0.0159</td><td class="num">2.21</td><td class="num">4.70</td><td class="num">9.61</td><td class="num">9.8%</td><td class="num">0.866</td><td class="num">0.60</td><td class="num">0.124</td></tr>
-      <tr class="hl"><td><strong>FT-1000</strong></td><td class="num">878 / 122</td><td class="num">4</td><td class="num">65 min</td><td class="num">0.0133</td><td class="num">5.59</td><td class="num">3.25</td><td class="num">8.38</td><td class="num">4.3%</td><td class="num">0.960</td><td class="num">0.83</td><td class="num">0.031</td></tr>
+      <tr><td>FT-1000</td><td class="num">878 / 122</td><td class="num">4</td><td class="num">65 min</td><td class="num">0.0133</td><td class="num">5.59</td><td class="num">3.25</td><td class="num">8.38</td><td class="num">4.3%</td><td class="num">0.960</td><td class="num">0.83</td><td class="num">0.031</td></tr>
+      <tr class="hl"><td><strong>FT-1000 + θ refine</strong></td><td class="num">878 / 122</td><td class="num">+4</td><td class="num">+92 min</td><td class="num">0.0128</td><td class="num">2.16</td><td class="num">3.16</td><td class="num">8.05</td><td class="num">4.45%</td><td class="num">0.960</td><td class="num">0.83</td><td class="num">0.021</td></tr>
     </tbody></table></div>
-  <div class="out"><span class="tag">notes</span><pre>Test split: 149 scenarios (128 feasible, 21 infeasible). Inference ~0.27 s vs AC-OPF 6.4 s (~24x).
+  <div class="src"><span class="tag">source</span><pre>python -I src/abgrid/fm/refine.py   <span class="c"># continue FT-1000: lr 5e-5, θ term ×20, keep best val epoch</span></pre></div>
+  <div class="out"><span class="tag">notes</span><pre>Test split: 149 scenarios (128 feasible, 21 infeasible). Inference ~0.3 s vs AC-OPF 6.4 s (~18-24x).
 0-shot calls every case feasible (0/21 infeasible caught). FT-1000 catches 15/21 with no false alarms.
-θ regresses at FT-1000: angle spread is compressed (slope 0.95 -> 0.87, branch Δθ MAE 0.25° -> 0.60°),
-likely from only 4 epochs and the multi-task loss favouring Pg/feasibility. Not fixed yet.
+θ regressed at FT-1000 (angle spread compressed). Fixed by the θ-weighted continuation:
+val θ 5.42° -> 2.03°, test θ 5.59° -> 2.16°; V/Pg/Qg slightly better, cost and feasibility unchanged.
 Train and test come from the same synthetic generator: this is interpolation inside our model.</pre></div>
-  <div class="md"><p>Not run yet: gridfm-graphkit comparison, warm-start speed-up, KCL residual.</p></div>
+  <div class="md"><p>gridfm-graphkit comparison skipped: no public pretrained weights (would need from-scratch training and a large install). KCL residual not run.</p></div>
+</section>
+
+<section class="cell" id="warmstart">
+  <div class="cell-h"><span class="cmd">Cmd 7d</span><h2>Warm-start test</h2><span class="pill warn">ran · no speed-up</span></div>
+  <div class="src"><span class="tag">source</span><pre>.venv-fm/bin/python -I src/abgrid/fm/warmstart.py predict 30   <span class="c"># model predictions for 30 feasible test cases</span>
+.venv/bin/python -m abgrid.fm.warmstart solve                  <span class="c"># AC-OPF (PIPS) from 5 different starting points</span></pre></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Starting point</th><th class="num">Converged</th><th class="num">Median time</th><th class="num">Median iterations</th></tr></thead>
+    <tbody>
+      <tr class="hl"><td><strong>Flat (default)</strong></td><td class="num">30 / 30</td><td class="num">7.66 s</td><td class="num">27</td></tr>
+      <tr><td>DC-OPF Pg + power flow</td><td class="num">26 / 30</td><td class="num">8.67 s</td><td class="num">27</td></tr>
+      <tr><td>Model Pg + power flow</td><td class="num">24 / 30</td><td class="num">8.55 s</td><td class="num">28</td></tr>
+      <tr><td>Model Pg + model gen voltages</td><td class="num">17 / 30</td><td class="num">11.25 s</td><td class="num">40</td></tr>
+      <tr><td>Model Pg + full V / θ</td><td class="num">0 / 30</td><td class="num">–</td><td class="num">–</td></tr>
+    </tbody></table></div>
+  <div class="out"><span class="tag">notes</span><pre>Every converged run reached the labelled cost (0.0% difference): the start changes speed, not the answer.
+Interior-point solvers build their own interior start; a near-optimal guess sits on active limits and hurts.
+The model's value here is screening (which cases need a solver), not faster individual solves.</pre></div>
+</section>
+
+<section class="cell" id="siting">
+  <div class="cell-h"><span class="cmd">Cmd 7e</span><h2>Data-centre siting screen</h2><span class="pill ok">ran · 4,914 cases · 96 solver checks</span></div>
+  <div class="src"><span class="tag">source</span><pre>.venv/bin/python -m abgrid.usecase.siting_screen base             <span class="c"># winter + summer peak snapshots (AC-OPF)</span>
+.venv-fm/bin/python -I src/abgrid/usecase/siting_screen.py screen  <span class="c"># 819 buses × 100/300/500 MW × 2 snapshots</span>
+.venv/bin/python -m abgrid.usecase.siting_screen verify           <span class="c"># solver: top / borderline / worst / random</span>
+.venv/bin/python -m abgrid.usecase.siting_screen report</pre></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Size</th><th class="num">Model says feasible · winter</th><th class="num">· summer</th><th class="num">Checked</th><th class="num">Solver feasible</th><th class="num">Model feasible</th><th class="num">Agree</th><th class="num">AUC</th></tr></thead>
+    <tbody>
+      <tr><td>100 MW</td><td class="num">97.7%</td><td class="num">96.8%</td><td class="num">32</td><td class="num">21</td><td class="num">21</td><td class="num">24</td><td class="num">0.84</td></tr>
+      <tr><td>300 MW</td><td class="num">46.0%</td><td class="num">40.2%</td><td class="num">32</td><td class="num">4</td><td class="num">16</td><td class="num">18</td><td class="num">0.69</td></tr>
+      <tr><td>500 MW</td><td class="num">32.5%</td><td class="num">12.3%</td><td class="num">32</td><td class="num">3</td><td class="num">14</td><td class="num">21</td><td class="num">0.92</td></tr>
+    </tbody></table></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Check group</th><th class="num">n</th><th class="num">Solver feasible</th><th class="num">Model feasible</th><th class="num">Agree</th></tr></thead>
+    <tbody>
+      <tr><td>Top-ranked</td><td class="num">30</td><td class="num">12</td><td class="num">30</td><td class="num">12</td></tr>
+      <tr><td>Borderline (p≈0.5)</td><td class="num">30</td><td class="num">8</td><td class="num">14</td><td class="num">16</td></tr>
+      <tr><td>Random</td><td class="num">18</td><td class="num">8</td><td class="num">7</td><td class="num">17</td></tr>
+      <tr><td>Worst-ranked</td><td class="num">18</td><td class="num">0</td><td class="num">0</td><td class="num">18</td></tr>
+    </tbody></table></div>
+  <div class="out"><span class="tag">notes</span><pre>Screen: 4,914 cases in ~32 min (0.39 s each) vs ~54 solver-hours brute force.
+Rules out bad sites reliably (worst 18/18, random 17/18). Top picks are over-optimistic: 12/30 confirmed
+(winner's curse; 300-500 MW single-site loads are sparse in training). Δcost ranking weak (corr 0.26).
+Use the model as a pre-filter; solve every shortlisted site. Map: outputs/phase7/siting_map_300mw.png</pre></div>
 </section>
 
 <!-- ============ 8 VERIFY ============ -->
@@ -323,12 +372,12 @@ pytest -q                      <span class="c"># topology + export + relaxation 
 
 <!-- ============ 9 NEXT ============ -->
 <section class="cell" id="next">
-  <div class="cell-h"><span class="cmd">Cmd 9</span><h2>Next runs</h2><span class="pill warn">queued</span></div>
+  <div class="cell-h"><span class="cmd">Cmd 9</span><h2>Status and next steps</h2><span class="pill ok">phases 1–7 done</span></div>
   <div class="md">
-    <div class="flow"><span>Phase 5 · 1,250 scenarios ✓</span><em>→</em><span>Phase 6 · FT 10/100/1000 ✓</span><em>→</em><span>Phase 7 · data-centre siting</span></div>
+    <div class="flow"><span>Phase 5 · 1,250 scenarios ✓</span><em>→</em><span>Phase 6 · FT + θ refine ✓</span><em>→</em><span>Phase 7 · siting screen ✓</span></div>
     <ul>
-      <li>Scenarios: AIL seasonal/hourly shapes, wind/solar availability, N-1 line and unit outages, HVDC and intertie schedules, 100/300/500 MW data-centre loads.</li>
-      <li>Each scenario keeps its relaxation level and feasibility label for the feasibility head.</li>
+      <li>Biggest gap: more single-bus large-load scenarios (100–600 MW across 138/240 kV buses) in fine-tuning, then re-check the siting top picks.</li>
+      <li>Not run: KCL residual metric; gridfm-graphkit (no public weights).</li>
       <li>Open question: converter fidelity for quadratic costs is checked only by round trip, since the GridSFM samples use zero quadratic cost.</li>
     </ul>
   </div>
